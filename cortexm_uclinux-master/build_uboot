@@ -1,0 +1,5 @@
+make uboot_clean
+
+sleep 2
+
+make CROSS_COMPILE=/usr/local/arm/arm-2010q1/bin/arm-uclinuxeabi- uboot 
