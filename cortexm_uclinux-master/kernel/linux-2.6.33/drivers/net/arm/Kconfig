@@ -1,0 +1,128 @@
+#
+# Acorn Network device configuration
+#  These are for Acorn's Expansion card network interfaces
+#
+config ARM_AM79C961A
+	bool "ARM EBSA110 AM79C961A support"
+	depends on ARM && ARCH_EBSA110
+	select CRC32
+	help
+	  If you wish to compile a kernel for the EBSA-110, then you should
+	  always answer Y to this.
+
+config ARM_ETHER1
+	tristate "Acorn Ether1 support"
+	depends on ARM && ARCH_ACORN
+	help
+	  If you have an Acorn system with one of these (AKA25) network cards,
+	  you should say Y to this option if you wish to use it with Linux.
+
+config ARM_ETHER3
+	tristate "Acorn/ANT Ether3 support"
+	depends on ARM && ARCH_ACORN
+	help
+	  If you have an Acorn system with one of these network cards, you
+	  should say Y to this option if you wish to use it with Linux.
+
+config ARM_ETHERH
+	tristate "I-cubed EtherH/ANT EtherM support"
+	depends on ARM && ARCH_ACORN
+	select CRC32
+	help
+	  If you have an Acorn system with one of these network cards, you
+	  should say Y to this option if you wish to use it with Linux.
+
+config ARM_AT91_ETHER
+	tristate "AT91RM9200 Ethernet support"
+	depends on ARM && ARCH_AT91RM9200
+	select MII
+	help
+	  If you wish to compile a kernel for the AT91RM9200 and enable
+	  ethernet support, then you should always answer Y to this.
+
+config ARM_KS8695_ETHER
+	tristate "KS8695 Ethernet support"
+	depends on ARM && ARCH_KS8695
+	select MII
+	help
+	  If you wish to compile a kernel for the KS8695 and want to
+	  use the internal ethernet then you should answer Y to this.
+
+config EP93XX_ETH
+	tristate "EP93xx Ethernet support"
+	depends on ARM && ARCH_EP93XX
+	select MII
+	help
+	  This is a driver for the ethernet hardware included in EP93xx CPUs.
+	  Say Y if you are building a kernel for EP93xx based devices.
+
+config IXP4XX_ETH
+	tristate "Intel IXP4xx Ethernet support"
+	depends on ARM && ARCH_IXP4XX && IXP4XX_NPE && IXP4XX_QMGR
+	select PHYLIB
+	help
+	  Say Y here if you want to use built-in Ethernet ports
+	  on IXP4xx processor.
+
+config W90P910_ETH
+	tristate "Nuvoton w90p910 Ethernet support"
+	depends on ARM && ARCH_W90X900
+	select PHYLIB
+	select MII
+	help
+	  Say Y here if you want to use built-in Ethernet ports
+	  on w90p910 processor.
+
+config STM32_ETHER
+	tristate "STM32 Ethernet support"
+	depends on ARM && (ARCH_STM32 || ARCH_LPC18XX)
+	select MII
+	help
+	  Say Y here if you want to use the built-in Ethernet port
+	  on the STM32 processor.
+
+config LPC178X_ETHER
+	tristate "LPC178x/7x Ethernet support"
+	depends on ARM && ARCH_LPC178X
+	select MII
+	help
+	  Say Y here if you want to use the built-in Ethernet port
+	  on the LPC178x/7x processor.
+
+config M2S_ETH
+	tristate "SmartFusion2 Ethernet support"
+	depends on ARM && ARCH_M2S
+	select MII
+	help
+	  Say Y here if you want to use the built-in Ethernet port
+	  on the SmartFusion2 processor
+
+config M2S_ETH_RX_NUM
+	int "Number of RX buffers in SmartFusion2"
+	depends on M2S_ETH
+	default "4"
+	help
+	  Specify the number of RX buffers for SmartFusion2
+
+config M2S_ETH_TX_NUM
+	int "Number of TX buffers in SmartFusion2"
+	depends on M2S_ETH
+	default "4"
+	help
+	  Specify the number of TX buffers for SmartFusion2
+
+config M2S_ETH_BUF_IN_ESRAM
+	bool "Whether SmartFusion2 buffers reside in eSRAM"
+	depends on M2S_ETH
+	default y
+	help
+	  Specify Y if you want for the RX / TX buffer and decriptors
+	  to reside in the SmartFusion2 embedded SRAM
+
+config M2S_ETH_BUF_IN_ESRAM_BASE
+	hex "Base address of SmartFusion2 buffers in eSRAM"
+	depends on M2S_ETH_BUF_IN_ESRAM
+	default "0x8000"
+	help
+	  Specify base address of the RX/ TX buffers and descriptors
+	  in the SmartFusion2 embedded SRAM
