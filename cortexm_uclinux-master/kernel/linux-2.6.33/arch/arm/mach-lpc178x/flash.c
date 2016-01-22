@@ -69,7 +69,7 @@ static struct resource flash_resources[] = {
  * 300000-end of Flash:	JFFS2 filesystem
  */
 #define FLASH_IMAGE_OFFSET	0x20000
-#define FLASH_JFFS2_OFFSET	(3*1024*1024)
+#define FLASH_JFFS2_OFFSET	(6*1024*1024)
 static struct mtd_partition flash_partitions[] = {
 	{
 		.name	= "flash_uboot_env",
@@ -117,7 +117,7 @@ void __init lpc178x_flash_init(void)
 	 */
 	switch (lpc178x_platform_get()) {
 	case PLATFORM_LPC178X_EA_LPC1788:
-		size = 4*1024*1024;
+		size = 16*1024*1024;
 		break;
 	case PLATFORM_LPC178X_LNX_EVB:
 		size = 16*1024*1024;
