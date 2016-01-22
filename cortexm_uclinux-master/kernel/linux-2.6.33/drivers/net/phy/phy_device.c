@@ -212,7 +212,6 @@ int get_phy_id(struct mii_bus *bus, int addr, u32 *phy_id)
 		return -EIO;
 
 	*phy_id |= (phy_reg & 0xffff);
-
 	return 0;
 }
 EXPORT_SYMBOL(get_phy_id);
@@ -238,9 +237,10 @@ struct phy_device * get_phy_device(struct mii_bus *bus, int addr)
 	/* If the phy_id is mostly Fs, there is no device there */
 	if ((phy_id & 0x1fffffff) == 0x1fffffff)
 		return NULL;
+	if ((phy_id & 0x1fffffff) == 0xffff)
+		return NULL;
 
 	dev = phy_device_create(bus, addr, phy_id);
-
 	return dev;
 }
 EXPORT_SYMBOL(get_phy_device);
@@ -809,6 +809,7 @@ static int genphy_config_init(struct phy_device *phydev)
 	features = (SUPPORTED_TP | SUPPORTED_MII
 			| SUPPORTED_AUI | SUPPORTED_FIBRE |
 			SUPPORTED_BNC);
+
 
 	/* Do we support autonegotiation? */
 	val = phy_read(phydev, MII_BMSR);
