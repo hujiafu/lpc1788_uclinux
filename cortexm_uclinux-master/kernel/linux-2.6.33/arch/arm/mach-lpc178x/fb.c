@@ -153,6 +153,32 @@ static struct amba_device lpc178x_fb_device = {
 	.irq				= { LPC178X_LCD_IRQ, NO_IRQ },
 };
 
+
+static struct resource lpc1788_lcd_resource[] = {
+	[0]	=	{
+		.start	=	LPC178X_LCD_BASE,
+		.end	=	LPC178X_LCD_BASE + SZ_16K - 1,
+		.flags	=	IORESOURCE_MEM,
+	},
+	[1]	=	{
+		.start	=	LPC178X_LCD_IRQ,
+		.end	=	LPC178X_LCD_IRQ,
+		.flags	=	IORESOURCE_IRQ,
+	}
+};
+
+struct platform_device lpc1788_fb_device = {
+	.name	= "lpc1788-lcd",
+	.id		=	-1,
+	.num_resources	=	ARRAY_SIZE(lpc1788_lcd_resource),
+	.resource	=	lpc1788_lcd_resource,
+	.platform_data	=	&lpc178x_fb_data,
+	.dev	=	{
+		.dma_mask	=	~0,
+		.coherent_dma_mask	=	~0,
+	}
+}
+
 /*
  * I2C SMBus register of the PCA9532 chip
  */

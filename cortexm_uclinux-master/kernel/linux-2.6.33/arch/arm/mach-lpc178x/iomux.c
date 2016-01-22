@@ -480,8 +480,8 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 	{{2,  7}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 	/* P2.8 (D) = LCD D6 */
 	{{2,  8}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
-	/* P2.9 (D) = LCD D7 */
-	{{2,  9}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P4.29 (D) = LCD D7 */
+	{{4,  29}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 	/* P2.12 (D) = LCD D3 */
 	{{2, 12}, LPC178X_GPIO_CONFIG_D(5, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 	/* P2.13 (D) = LCD D19 */
