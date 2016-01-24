@@ -32,9 +32,52 @@
  */
 #define LPC178X_LCD_BASE	(LPC178X_AHB_PERIPH_BASE + 0x00008000)
 
+#define LPC178X_LCD_CTRL	0x18
+
+#define LPC178X_LCD_TFT		(0x1<<5)
+#define LPC178X_LCD_16BPP_565	(0x6<<1)
+
+#define LPC178X_LCD_FP_LOW		(0x1<<11)
+#define LPC178X_LCD_LP_LOW		(0x1<<12)
+#define LPC178X_LCD_DATA_FALL_EAGE	(0x1<<13)
+#define LPC178X_LCD_CLK_BYPASS		(0x1<<26)
+
 void __init lpc178x_fb_init(void);
 
-struct lpc178xfb_display {
+struct lpc178xfb_hw {
+
+	u32 lcd_timh;
+	u32 lcd_timv;
+	u32 lcd_pol;
+	u32 lcd_le;
+	u32 lcd_upbase;
+	u32 lcd_lpbase;
+	u32 lcd_ctrl;
+	u32 lcd_intmsk;
+	u32 lcd_intraw;
+	u32 lcd_intstat;
+	u32 lcd_intclr;
+	u32 lcd_upcurr;
+	u32 lcd_lpcurr;
+	u32 lcd_rcv1[115];
+	u32 lcd_pal[128];
+	u32 lcd_rcv2[256];
+	u32 crsr_img[256];
+	u32 crsr_ctrl;
+	u32 crsr_cfg;
+	u32 crsr_pal0;
+	u32 crsr_pal1;
+	u32 crsr_xy;
+	u32 crsr_clip;
+	u32 crsr_rcv1[2];
+	u32 crsr_intmsk;
+	u32 crsr_intclr;
+	u32 crsr_intraw;
+	u32 crsr_intstat;
+};
+
+
+struct lpc1788fb_display {
 	/* LCD type */
 	unsigned type;
 
@@ -55,10 +98,18 @@ struct lpc178xfb_display {
 	unsigned short lower_margin;	/* value in lines (TFT) or 0 (STN) */
 	unsigned short vsync_len;	/* value in lines (TFT) or 0 (STN) */
 
-	/* lcd configuration registers */
-	unsigned long	lcdcon5;
+	unsigned long lcdpol;
+
+	struct clk *clk
 };
 
+struct lpc1788fb_mach_info {
+         
+        struct lpc1788fb_display *displays;     /* attached diplays info */
+        unsigned num_displays;                  /* number of defined displays */
+        unsigned default_display;
+ 
+};
 
 
 #endif /* _MACH_LPC178X_FB_H_ */

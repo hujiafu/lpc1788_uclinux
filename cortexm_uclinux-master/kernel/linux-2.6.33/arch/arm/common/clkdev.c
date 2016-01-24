@@ -80,7 +80,8 @@ EXPORT_SYMBOL(clk_get_sys);
 struct clk *clk_get(struct device *dev, const char *con_id)
 {
 	const char *dev_id = dev ? dev_name(dev) : NULL;
-
+	if(dev_id != NULL)
+		printk("dev_id = %s\n", dev_id);
 	return clk_get_sys(dev_id, con_id);
 }
 EXPORT_SYMBOL(clk_get);
