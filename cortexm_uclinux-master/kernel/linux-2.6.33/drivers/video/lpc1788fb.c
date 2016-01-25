@@ -139,6 +139,9 @@ static int lpc1788fb_check_var(struct fb_var_screeninfo *var,
 	var->vsync_len = display->vsync_len;
 	var->hsync_len = display->hsync_len;
 
+	fbi->regs.lcd_ctrl = display->lcdctrl;
+	fbi->regs.lcd_pol = display->lcdpol;
+
 	var->transp.offset = 0;
 	var->transp.length = 0;
 
@@ -216,13 +219,16 @@ static void lpc1788fb_calculate_tft_lcd_regs(const struct fb_info *info,
 					     struct lpc178xfb_hw *regs)
 {
 	const struct lpc1788fb_info *fbi = info->par;
+	void __iomem *regs = fbi->io;
 	const struct fb_var_screeninfo *var = &info->var;
 	long len;
 
 	switch (var->bits_per_pixel) {
 	case 16:
-		regs->lcd_ctrl &= ~LPC178X_LCD_FMT_CLEAR;
-		regs->lcd_ctrl |= LPC178X_LCD_16BPP_565;
+		readl(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);
+		fbi->regs.lcd_ctrl &= ~LPC178X_LCD_FMT_CLEAR;
+		fbi->regs.lcd_ctrl |= LPC178X_LCD_16BPP_565;
+		writel(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);
 
 		break;
 	default:
@@ -239,17 +245,19 @@ static void lpc1788fb_calculate_tft_lcd_regs(const struct fb_info *info,
 	dprintk("setting horz: lft=%d, rt=%d, sync=%d\n",
 		var->left_margin, var->right_margin, var->hsync_len);
 
-	regs->lcd_timh = 0;
-	regs->lcd_timh |= (var->left_margin - 1) << 24;
-	regs->lcd_timh |= (var->right_margin - 1) << 16;
-	regs->lcd_timh |= (var->hsync_len - 1) << 8;
-	regs->lcd_timh |= ((var->xres)/16 - 1) << 2;
+	fbi->regs.lcd_timh = 0;
+	fbi->regs.lcd_timh |= (var->left_margin - 1) << 24;
+	fbi->regs.lcd_timh |= (var->right_margin - 1) << 16;
+	fbi->regs.lcd_timh |= (var->hsync_len - 1) << 8;
+	fbi->regs.lcd_timh |= ((var->xres)/16 - 1) << 2;
+	writel(fbi->regs.lcd_timh, regs + LPC178X_LCD_TIMH);
 
-	regs->lcd_timv = 0;
-	regs->lcd_timv |= (var->upper_margin - 1) << 24;
-	regs->lcd_timv |= (var->lower_margin - 1) << 16;
-	regs->lcd_timv |= (var->vsync_len - 1) << 8;
-	regs->lcd_timv |= ((var->yres) - 1);
+	fbi->regs.lcd_timv = 0;
+	fbi->regs.lcd_timv |= (var->upper_margin - 1) << 24;
+	fbi->regs.lcd_timv |= (var->lower_margin - 1) << 16;
+	fbi->regs.lcd_timv |= (var->vsync_len - 1) << 8;
+	fbi->regs.lcd_timv |= ((var->yres) - 1);
+	writel(fbi->regs.lcd_timv, regs + LPC178X_LCD_TIMV);
 	
 }
 
@@ -288,19 +296,19 @@ static void lpc1788fb_activate_var(struct fb_info *info)
 	dprintk("new register set:\n");
 
 
-	fbi->regs.lcdpol &= ~(LPC178X_LCD_CPL_MASK);
-	fbi->regs.lcdpol |= (var->xres - 1)<<16;
-	writel(fbi->regs.lcdpol, regs + LPC178X_LCD_POL);
+	fbi->regs.lcd_pol &= ~(LPC178X_LCD_CPL_MASK);
+	fbi->regs.lcd_pol |= (var->xres - 1)<<16;
+	writel(fbi->regs.lcd_pol, regs + LPC178X_LCD_POL);
 
 	/* set lcd address pointers */
 	writel(info->fix.smem_start, regs + LPC178X_LCD_UPBASE);
 	writel(info->fix.smem_start, regs + LPC178X_LCD_LPBASE);
 
 	/* enable lcd control */
-	lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
-	writel(lcdctrl | (0x1<<0), info->io + LPC178X_LCD_CTRL);
+	lcdctrl = readl(regs + LPC178X_LCD_CTRL);
+	writel(lcdctrl | (0x1<<0), regs + LPC178X_LCD_CTRL);
 	for(delay=0; delay<10000; delay++);
-	writel(lcdctrl | (0x1<<11), info->io + LPC178X_LCD_CTRL);	
+	writel(lcdctrl | (0x1<<11), regs + LPC178X_LCD_CTRL);	
 	
 }
 
@@ -411,7 +419,7 @@ static irqreturn_t lpc1788fb_irq(int irq, void *dev_id)
 static int __init lpc1788fb_probe(struct platform_device *pdev,
 				  enum s3c_drv_type drv_type){
 
-	struct lp1788fb_info *info;
+	struct lpc1788fb_info *info;
 	struct lpc1788fb_display *display;
 	struct fb_info *fbinfo;
 	struct lpc1788fb_mach_info *mach_info;
@@ -445,6 +453,12 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 	fbinfo = framebuffer_alloc(sizeof(struct lpc1788fb_info), &pdev->dev);
 	if (!fbinfo)
 		return -ENOMEM;
+
+	platform_set_drvdata(pdev, fbinfo);
+
+	info = fbinfo->par;
+	info->dev = &pdev->dev;
+	info->drv_type = drv_type;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
