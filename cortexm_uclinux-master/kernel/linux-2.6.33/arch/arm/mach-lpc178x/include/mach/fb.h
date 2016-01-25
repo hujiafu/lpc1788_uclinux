@@ -32,15 +32,25 @@
  */
 #define LPC178X_LCD_BASE	(LPC178X_AHB_PERIPH_BASE + 0x00008000)
 
+#define LPC178X_LCD_POL		0x8
+#define LPC178X_LCD_UPBASE		0x10
+#define LPC178X_LCD_LPBASE		0x14
 #define LPC178X_LCD_CTRL	0x18
+
 
 #define LPC178X_LCD_TFT		(0x1<<5)
 #define LPC178X_LCD_16BPP_565	(0x6<<1)
+#define LPC178X_LCD_FMT_MASK	(0x7<<1)
 
+//lcd_pol
 #define LPC178X_LCD_FP_LOW		(0x1<<11)
 #define LPC178X_LCD_LP_LOW		(0x1<<12)
 #define LPC178X_LCD_DATA_FALL_EAGE	(0x1<<13)
 #define LPC178X_LCD_CLK_BYPASS		(0x1<<26)
+#define LPC178X_LCD_CPL_MASK		(0x3ff<<16)
+
+
+#define LPC178X_LCD_CLK_FRE		(54000000)
 
 void __init lpc178x_fb_init(void);
 
@@ -98,8 +108,11 @@ struct lpc1788fb_display {
 	unsigned short lower_margin;	/* value in lines (TFT) or 0 (STN) */
 	unsigned short vsync_len;	/* value in lines (TFT) or 0 (STN) */
 
+	unsigned long lcdctrl;
 	unsigned long lcdpol;
-
+	unsigned long lcdtimeh;
+	unsigned long lcdtimev;
+	
 	struct clk *clk
 };
 

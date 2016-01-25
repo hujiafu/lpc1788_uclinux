@@ -79,6 +79,7 @@ static struct lpc1788fb_display lpc1788_lcd_cfg[] __initdata = {
                          240, 21, 38, 6,         /* x timing */
                          320, 4, 4, 2,           /* y timing */
                          60),                    /* refresh rate */
+				 .lcdctrl		= (LPC178X_LCD_TFT | LPC178X_LCD_16BPP_565),
                  .lcdpol        = (LPC178X_LCD_FP_LOW |
                                     LPC178X_LCD_LP_LOW |
                                     LPC178X_LCD_DATA_FALL_EAGE |
@@ -90,6 +91,7 @@ static struct lpc1788fb_display lpc1788_lcd_cfg[] __initdata = {
                          800, 40, 40, 48,        /* x timing */
                          480, 29, 3, 3,          /* y timing */
                          50),                    /* refresh rate */
+				 .lcdctrl		= (LPC178X_LCD_TFT | LPC178X_LCD_16BPP_565),
                  .lcdpol        = (LPC178X_LCD_FP_LOW |
                                     LPC178X_LCD_LP_LOW |
                                     LPC178X_LCD_DATA_FALL_EAGE |
@@ -102,6 +104,7 @@ static struct lpc1788fb_display lpc1788_lcd_cfg[] __initdata = {
                          768, 200, 16, 16,       /* x timing */
                          24),    /* refresh rate, maximum stable,
                                   tested with the FPGA shield */
+				 .lcdctrl		= (LPC178X_LCD_TFT | LPC178X_LCD_16BPP_565),
                  .lcdpol        = (LPC178X_LCD_FP_LOW |
                                     LPC178X_LCD_LP_LOW |
                                     LPC178X_LCD_DATA_FALL_EAGE |

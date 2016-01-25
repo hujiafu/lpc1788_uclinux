@@ -2,16 +2,252 @@
 static int lpc1788fb_check_var(struct fb_var_screeninfo *var,
                                 struct fb_info *info)
 {
+	struct lpc1788fb_info *fbi = info->par;
+	struct lpc1788fb_mach_info *mach_info = fbi->dev->platform_data;
+	struct lpc1788fb_display *display = NULL;
+	struct lpc1788fb_display *default_display = mach_info->displays +
+						    mach_info->default_display;
+	int type = default_display->type;
+	unsigned i;
 
 	printk("check_var(var=%p, info=%p)\n", var, info);
+	
+	if (var->yres == default_display->yres &&
+	    var->xres == default_display->xres &&
+	    var->bits_per_pixel == default_display->bpp)
+		display = default_display;
+	else
+		for (i = 0; i < mach_info->num_displays; i++)
+			if (type == mach_info->displays[i].type &&
+			    var->yres == mach_info->displays[i].yres &&
+			    var->xres == mach_info->displays[i].xres &&
+			    var->bits_per_pixel == mach_info->displays[i].bpp) {
+				display = mach_info->displays + i;
+				break;
+			}
+
+	if (!display) {
+		dprintk("wrong resolution or depth %dx%d at %d bpp\n",
+			var->xres, var->yres, var->bits_per_pixel);
+		return -EINVAL;
+	}
+
+	/* it is always the size as the display */
+	var->xres_virtual = display->xres;
+	var->yres_virtual = display->yres;
+	var->height = display->height;
+	var->width = display->width;
+
+	/* copy lcd settings */
+	var->pixclock = display->pixclock;
+	var->left_margin = display->left_margin;
+	var->right_margin = display->right_margin;
+	var->upper_margin = display->upper_margin;
+	var->lower_margin = display->lower_margin;
+	var->vsync_len = display->vsync_len;
+	var->hsync_len = display->hsync_len;
+
+	fbi->regs.lcdcon5 = display->lcdcon5;
+	/* set display type */
+	fbi->regs.lcdcon1 = display->type;
+
+	var->transp.offset = 0;
+	var->transp.length = 0;
+
+	/* set r/g/b positions */
+	switch (var->bits_per_pixel) {
+	case 1:
+	case 2:
+	case 4:
+		var->red.offset	= 0;
+		var->red.length	= var->bits_per_pixel;
+		var->green	= var->red;
+		var->blue	= var->red;
+		break;
+	case 8:
+		if (display->type != S3C2410_LCDCON1_TFT) {
+			/* 8 bpp 332 */
+			var->red.length		= 3;
+			var->red.offset		= 5;
+			var->green.length	= 3;
+			var->green.offset	= 2;
+			var->blue.length	= 2;
+			var->blue.offset	= 0;
+		} else {
+			var->red.offset		= 0;
+			var->red.length		= 8;
+			var->green		= var->red;
+			var->blue		= var->red;
+		}
+		break;
+	case 12:
+		/* 12 bpp 444 */
+		var->red.length		= 4;
+		var->red.offset		= 8;
+		var->green.length	= 4;
+		var->green.offset	= 4;
+		var->blue.length	= 4;
+		var->blue.offset	= 0;
+		break;
+
+	default:
+	case 16:
+		if (display->lcdpol & LPC178X_LCD_16BPP_565) {
+			/* 16 bpp, 565 format */
+			var->red.offset		= 11;
+			var->green.offset	= 5;
+			var->blue.offset	= 0;
+			var->red.length		= 5;
+			var->green.length	= 6;
+			var->blue.length	= 5;
+		} else {
+			/* 16 bpp, 5551 format */
+			var->red.offset		= 11;
+			var->green.offset	= 6;
+			var->blue.offset	= 1;
+			var->red.length		= 5;
+			var->green.length	= 5;
+			var->blue.length	= 5;
+		}
+		break;
+	case 32:
+		/* 24 bpp 888 and 8 dummy */
+		var->red.length		= 8;
+		var->red.offset		= 16;
+		var->green.length	= 8;
+		var->green.offset	= 8;
+		var->blue.length	= 8;
+		var->blue.offset	= 0;
+		break;
+	}
+	return 0;
 
 }
+
+static void lpc1788fb_calculate_tft_lcd_regs(const struct fb_info *info,
+					     struct lpc178xfb_hw *regs)
+{
+	const struct lpc1788fb_info *fbi = info->par;
+	const struct fb_var_screeninfo *var = &info->var;
+	long len;
+
+	switch (var->bits_per_pixel) {
+	case 16:
+		regs->lcd_ctrl &= ~LPC178X_LCD_FMT_CLEAR;
+		regs->lcd_ctrl |= LPC178X_LCD_16BPP_565;
+
+		break;
+	default:
+		/* invalid pixel depth */
+		dev_err(fbi->dev, "invalid bpp %d\n",
+			var->bits_per_pixel);
+	}
+
+	len = var->xres * var
+	/* update X/Y info */
+	dprintk("setting vert: up=%d, low=%d, sync=%d\n",
+		var->upper_margin, var->lower_margin, var->vsync_len);
+
+	dprintk("setting horz: lft=%d, rt=%d, sync=%d\n",
+		var->left_margin, var->right_margin, var->hsync_len);
+
+	regs->lcd_timh = 0;
+	regs->lcd_timh |= (var->left_margin - 1) << 24;
+	regs->lcd_timh |= (var->right_margin - 1) << 16;
+	regs->lcd_timh |= (var->hsync_len - 1) << 8;
+	regs->lcd_timh |= ((var->xres)/16 - 1) << 2;
+
+	regs->lcd_timv = 0;
+	regs->lcd_timv |= (var->upper_margin - 1) << 24;
+	regs->lcd_timv |= (var->lower_margin - 1) << 16;
+	regs->lcd_timv |= (var->vsync_len - 1) << 8;
+	regs->lcd_timv |= ((var->yres) - 1);
+	
+}
+
+
+
+
+static void lpc1788fb_activate_var(struct fb_info *info)
+{
+	struct lpc1788fb_info *fbi = info->par;
+	void __iomem *regs = fbi->io;
+	int type = fbi->regs.lcdctrl & LPC178X_LCD_TFT;
+	struct fb_var_screeninfo *var = &info->var;
+	int clkdiv;
+	volatile int delay;
+	unsigned long lcdctrl;
+
+	clkdiv = LPC178X_LCD_CLK_FRE / (var->pixclock);
+
+	dprintk("%s: var->xres  = %d\n", __func__, var->xres);
+	dprintk("%s: var->yres  = %d\n", __func__, var->yres);
+	dprintk("%s: var->bpp   = %d\n", __func__, var->bits_per_pixel);
+
+	if (type == LPC178X_LCD_TFT) {
+		lpc1788fb_calculate_tft_lcd_regs(info, &fbi->regs);
+		--clkdiv;
+		if (clkdiv < 0)
+			clkdiv = 0;
+	} else {
+		printk("not LPC178X_LCD_TFT\n");
+	}
+
+	LPC178X_SCC->lcd_cfg = clk_div;
+
+	/* write new registers */
+
+	dprintk("new register set:\n");
+
+
+	fbi->regs.lcdpol &= ~(LPC178X_LCD_CPL_MASK);
+	fbi->regs.lcdpol |= (var->xres - 1)<<16;
+	writel(fbi->regs.lcdpol, regs + LPC178X_LCD_POL);
+
+	/* set lcd address pointers */
+	writel(info->fix.smem_start, regs + LPC178X_LCD_UPBASE);
+	writel(info->fix.smem_start, regs + LPC178X_LCD_LPBASE);
+
+	/* enable lcd control */
+	lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
+	writel(lcdctrl | (0x1<<0), info->io + LPC178X_LCD_CTRL);
+	for(delay=0; delay<10000; delay++);
+	writel(lcdctrl | (0x1<<11), info->io + LPC178X_LCD_CTRL);	
+	
+}
+
+static int lpc1788fb_set_par(struct fb_info *info)
+{
+	struct fb_var_screeninfo *var = &info->var;
+
+	switch (var->bits_per_pixel) {
+	case 32:
+	case 16:
+	case 12:
+		info->fix.visual = FB_VISUAL_TRUECOLOR;
+		break;
+	case 1:
+		info->fix.visual = FB_VISUAL_MONO01;
+		break;
+	default:
+		info->fix.visual = FB_VISUAL_PSEUDOCOLOR;
+		break;
+	}
+
+	info->fix.line_length = (var->xres_virtual * var->bits_per_pixel) / 8;
+
+	/* activate this new configuration */
+
+	lpc1788fb_activate_var(info);
+	return 0;
+}
+
 
 
 static struct fb_ops lpc1788fb_ops = {
          .owner          = THIS_MODULE,
          .fb_check_var   = lpc1788fb_check_var,
-         .fb_set_par     = s3c2410fb_set_par,
+         .fb_set_par     = lpc1788fb_set_par,
          .fb_blank       = s3c2410fb_blank,
          .fb_setcolreg   = s3c2410fb_setcolreg,
          .fb_fillrect    = cfb_fillrect,
@@ -94,19 +330,21 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 	struct resource *res;
 	int irq;
 	int size;
+	unsigned long lcdctrl;
+	volatile int delay;
 
 	mach_info = pdev->dev.platform_data;
 	if (mach_info == NULL) {
                  dev_err(&pdev->dev,
                          "no platform data for lcd, cannot attach\n");
                  return -EINVAL;
-        }
+    }
 
 	 if (mach_info->default_display >= mach_info->num_displays) {
                  dev_err(&pdev->dev, "default is %d but only %d displays\n",
                          mach_info->default_display, mach_info->num_displays);
                  return -EINVAL;
-        }
+    }
 
 	display = mach_info->displays + mach_info->default_display;
 
@@ -141,7 +379,7 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 		ret = -ENXIO;
 		goto release_mem;
 	}
-#if LPC1788_LCD_HW
+	
 	display->clk = clk_get(&pdev->dev, NULL);
         if (!info->clk || IS_ERR(info->clk)) {
                 printk(KERN_ERR "failed to get lcd clock source\n");
@@ -151,15 +389,16 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 
 	clk_enable(display->clk); //enable LCD POWER
 	msleep(1);
-#endif
+	
 	info->irq_base = info->io;
 
 	strcpy(fbinfo->fix.id, driver_name);
 
 	//disable LCD 
-	lcdcon1 = readl(info->io + LPC178X_LCD_CTRL);
-	writel(lcdcon1 & ~(0x1<<11), info->io + LPC178X_LCD_CTRL);	
-	writel(lcdcon1 & ~(0x1<<0), info->io + LPC178X_LCD_CTRL);	
+	lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
+	writel(lcdctrl & ~(0x1<<11), info->io + LPC178X_LCD_CTRL);	
+	for(delay=0; delay<10000; delay++);
+	writel(lcdctrl & ~(0x1<<0), info->io + LPC178X_LCD_CTRL);	
 
 	fbinfo->fix.type            = FB_TYPE_PACKED_PIXELS;
 	fbinfo->fix.type_aux        = 0;
@@ -205,8 +444,8 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 	dprintk("got video memory\n");
 
 	fbinfo->var.xres = display->xres;
-        fbinfo->var.yres = display->yres;
-        fbinfo->var.bits_per_pixel = display->bpp;
+    fbinfo->var.yres = display->yres;
+    fbinfo->var.bits_per_pixel = display->bpp;
 
 	lpc1788fb_init_registers(fbinfo);
 

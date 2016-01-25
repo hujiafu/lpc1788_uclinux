@@ -3,24 +3,24 @@
 #define __LPC1788FB_H
 
 
-struct lp1788fb_info { 
+struct lpc1788fb_info { 
 
 	struct device           *dev;
 	struct clk              *clk;
  
 	struct resource         *mem;
-        void __iomem            *io;
-        void __iomem            *irq_base;
+    void __iomem            *io;
+    void __iomem            *irq_base;
  
-        struct lpc178xfb_hw     regs;
+    struct lpc178xfb_hw     regs;
  
-        unsigned long           clk_rate;
-        unsigned int            palette_ready;
+    unsigned long           clk_rate;
+    unsigned int            palette_ready;
  
  
-        /* keep these registers in case we need to re-write palette */
-        u32                     palette_buffer[256];
-        u32                     pseudo_pal[16];
+    /* keep these registers in case we need to re-write palette */
+    u32                     palette_buffer[256];
+    u32                     pseudo_pal[16];
  };       
 
 
