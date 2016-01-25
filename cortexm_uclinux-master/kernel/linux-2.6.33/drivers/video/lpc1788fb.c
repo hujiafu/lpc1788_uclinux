@@ -1,4 +1,96 @@
 
+static int lpc1788fb_setcolreg(unsigned regno,
+                               unsigned red, unsigned green, unsigned blue,
+                               unsigned transp, struct fb_info *info)
+{
+        struct lpc1788fb_info *fbi = info->par;
+        void __iomem *regs = fbi->io;
+        unsigned int val;
+
+        /* dprintk("setcol: regno=%d, rgb=%d,%d,%d\n",
+                   regno, red, green, blue); */
+ 
+        switch (info->fix.visual) {
+        case FB_VISUAL_TRUECOLOR:
+                /* true-colour, use pseudo-palette */
+
+                if (regno < 16) {
+                        u32 *pal = info->pseudo_palette;
+
+                        val  = chan_to_field(red,   &info->var.red);
+                        val |= chan_to_field(green, &info->var.green);
+                        val |= chan_to_field(blue,  &info->var.blue);
+
+                        pal[regno] = val;
+                }
+                break;
+
+        case FB_VISUAL_PSEUDOCOLOR:
+                if (regno < 256) {
+                        /* currently assume RGB 5-6-5 mode */
+
+                        val  = (red   >>  0) & 0xf800;
+                        val |= (green >>  5) & 0x07e0;
+                        val |= (blue  >> 11) & 0x001f;
+
+                        //writel(val, regs + S3C2410_TFTPAL(regno));
+                        //schedule_palette_update(fbi, regno, val);
+                }
+
+                break;
+
+        default:
+                return 1;       /* unknown type */
+        }
+
+        return 0;
+}
+
+
+
+static void lpc1788fb_lcd_enable(struct lpc1788fb_info *info, int enable)
+{
+        unsigned long flags;
+	unsigned long lcdctrl;
+	volatile int delay;
+
+        local_irq_save(flags);
+
+        if (enable){
+		lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
+		writel(lcdctrl | (0x1<<0), info->io + LPC178X_LCD_CTRL);
+		for(delay=0; delay<10000; delay++);
+		writel(lcdctrl | (0x1<<11), info->io + LPC178X_LCD_CTRL);	
+        }
+	else{
+		lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
+		writel(lcdctrl & ~(0x1<<11), info->io + LPC178X_LCD_CTRL);	
+		for(delay=0; delay<10000; delay++);
+		writel(lcdctrl & ~(0x1<<0), info->io + LPC178X_LCD_CTRL);	
+	}
+
+        local_irq_restore(flags);
+}
+
+
+
+static int lpc1788fb_blank(int blank_mode, struct fb_info *info)
+{
+        struct lpc1788fb_info *fbi = info->par;
+
+        dprintk("blank(mode=%d, info=%p)\n", blank_mode, info);
+
+        if (blank_mode == FB_BLANK_POWERDOWN) {
+                lpc1788fb_lcd_enable(fbi, 0);
+        } else {
+                lpc1788fb_lcd_enable(fbi, 1);
+        }
+
+        return 0;
+}
+
+
+
 static int lpc1788fb_check_var(struct fb_var_screeninfo *var,
                                 struct fb_info *info)
 {
@@ -46,10 +138,6 @@ static int lpc1788fb_check_var(struct fb_var_screeninfo *var,
 	var->lower_margin = display->lower_margin;
 	var->vsync_len = display->vsync_len;
 	var->hsync_len = display->hsync_len;
-
-	fbi->regs.lcdcon5 = display->lcdcon5;
-	/* set display type */
-	fbi->regs.lcdcon1 = display->type;
 
 	var->transp.offset = 0;
 	var->transp.length = 0;
@@ -248,8 +336,8 @@ static struct fb_ops lpc1788fb_ops = {
          .owner          = THIS_MODULE,
          .fb_check_var   = lpc1788fb_check_var,
          .fb_set_par     = lpc1788fb_set_par,
-         .fb_blank       = s3c2410fb_blank,
-         .fb_setcolreg   = s3c2410fb_setcolreg,
+         .fb_blank       = lpc1788fb_blank,
+         .fb_setcolreg   = lpc1788fb_setcolreg,
          .fb_fillrect    = cfb_fillrect,
          .fb_copyarea    = cfb_copyarea,
          .fb_imageblit   = cfb_imageblit,
