@@ -21,7 +21,9 @@ struct lpc1788fb_info {
     /* keep these registers in case we need to re-write palette */
     u32                     palette_buffer[256];
     u32                     pseudo_pal[16];
- };       
+};       
+
+#define PALETTE_BUFF_CLEAR (0x80000000)	/* entry is clear/invalid */
 
 
 

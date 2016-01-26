@@ -1945,6 +1945,29 @@ config FB_S3C2410_DEBUG
 	  Turn on debugging messages. Note that you can set/unset at run time
 	  through sysfs
 
+config FB_LPC1788
+	tristate "LPC1788 LCD framebuffer support"
+	depends on FB && ARCH_LPC178X
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+	---help---
+	  Frame buffer driver for the built-in LCD controller in the Samsung
+	  LPC1788 processor.
+
+	  This driver is also available as a module ( = code which can be
+	  inserted and removed from the running kernel whenever you want). The
+	  module will be called s3c2410fb. If you want to compile it as a module,
+	  say M here and read <file:Documentation/kbuild/modules.txt>.
+
+	  If unsure, say N.
+config FB_LPC1788_DEBUG
+	bool "LPC1788 lcd debug messages"
+	depends on FB_LPC1788
+	help
+	  Turn on debugging messages. Note that you can set/unset at run time
+	  through sysfs
+
 config FB_SM501
 	tristate "Silicon Motion SM501 framebuffer support"
 	depends on FB && MFD_SM501

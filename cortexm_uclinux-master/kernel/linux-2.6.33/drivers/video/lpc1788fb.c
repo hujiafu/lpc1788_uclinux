@@ -18,12 +18,33 @@
 #include <asm/div64.h>
  
 #include <asm/mach/map.h>
-#include <mach/regs-lcd.h>
-#include <mach/regs-gpio.h>
+//#include <mach/regs-lcd.h>
+//#include <mach/regs-gpio.h>
 #include <mach/fb.h>
+#include <mach/lpc178x.h>
+
+#ifdef CONFIG_PM
+#include <linux/pm.h>
+#endif
 
 #include "lpc1788fb.h"
 
+#ifdef CONFIG_FB_LPC1788_DEBUG
+static int debug	= 1;
+#else
+static int debug	= 0;
+#endif
+
+#define dprintk(msg...)	if (debug) { printk(KERN_DEBUG "lpc1788fb: " msg); }
+
+
+static inline unsigned int chan_to_field(unsigned int chan,
+					 struct fb_bitfield *bf)
+{
+	chan &= 0xffff;
+	chan >>= 16 - bf->length;
+	return chan << bf->offset;
+}
 
 static int lpc1788fb_setcolreg(unsigned regno,
                                unsigned red, unsigned green, unsigned blue,
@@ -168,6 +189,14 @@ static int lpc1788fb_check_var(struct fb_var_screeninfo *var,
 	var->lower_margin = display->lower_margin;
 	var->vsync_len = display->vsync_len;
 	var->hsync_len = display->hsync_len;
+	
+	dprintk("pixclock = %d\n", var->pixclock);
+	dprintk("left_margin = %d\n", var->left_margin);
+	dprintk("right_margin = %d\n", var->right_margin);
+	dprintk("upper_margin = %d\n", var->upper_margin);
+	dprintk("lower_margin = %d\n", var->lower_margin);
+	dprintk("vsync_len = %d\n", var->vsync_len);
+	dprintk("hsync_len = %d\n", var->hsync_len);
 
 	fbi->regs.lcd_ctrl = display->lcdctrl;
 	fbi->regs.lcd_pol = display->lcdpol;
@@ -215,6 +244,7 @@ static int lpc1788fb_check_var(struct fb_var_screeninfo *var,
 	case 16:
 		if (display->lcdctrl & LPC178X_LCD_16BPP_565) {
 			/* 16 bpp, 565 format */
+			dprintk("LPC178X_LCD_16BPP_565\n");
 			var->red.offset		= 11;
 			var->green.offset	= 5;
 			var->blue.offset	= 0;
@@ -245,20 +275,19 @@ static int lpc1788fb_check_var(struct fb_var_screeninfo *var,
 
 }
 
-static void lpc1788fb_calculate_tft_lcd_regs(const struct fb_info *info,
-					     struct lpc178xfb_hw *regs)
+static void lpc1788fb_calculate_tft_lcd_regs(struct fb_info *info)
 {
-	const struct lpc1788fb_info *fbi = info->par;
+	struct lpc1788fb_info *fbi = info->par;
 	void __iomem *regs = fbi->io;
 	const struct fb_var_screeninfo *var = &info->var;
-	long len;
 
 	switch (var->bits_per_pixel) {
 	case 16:
 		//readl(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);
-		fbi->regs.lcd_ctrl &= ~LPC178X_LCD_FMT_CLEAR;
+		fbi->regs.lcd_ctrl &= ~LPC178X_LCD_FMT_MASK;
 		fbi->regs.lcd_ctrl |= LPC178X_LCD_16BPP_565;
 		writel(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);
+		dprintk("lcd_ctrl 0x%x\n", fbi->regs.lcd_ctrl);
 
 		break;
 	default:
@@ -267,7 +296,6 @@ static void lpc1788fb_calculate_tft_lcd_regs(const struct fb_info *info,
 			var->bits_per_pixel);
 	}
 
-	len = var->xres * var
 	/* update X/Y info */
 	dprintk("setting vert: up=%d, low=%d, sync=%d\n",
 		var->upper_margin, var->lower_margin, var->vsync_len);
@@ -281,6 +309,7 @@ static void lpc1788fb_calculate_tft_lcd_regs(const struct fb_info *info,
 	fbi->regs.lcd_timh |= (var->hsync_len - 1) << 8;
 	fbi->regs.lcd_timh |= ((var->xres)/16 - 1) << 2;
 	writel(fbi->regs.lcd_timh, regs + LPC178X_LCD_TIMH);
+	dprintk("lcd_timh 0x%x\n", fbi->regs.lcd_timh);
 
 	fbi->regs.lcd_timv = 0;
 	fbi->regs.lcd_timv |= (var->upper_margin - 1) << 24;
@@ -288,6 +317,7 @@ static void lpc1788fb_calculate_tft_lcd_regs(const struct fb_info *info,
 	fbi->regs.lcd_timv |= (var->vsync_len - 1) << 8;
 	fbi->regs.lcd_timv |= ((var->yres) - 1);
 	writel(fbi->regs.lcd_timv, regs + LPC178X_LCD_TIMV);
+	dprintk("lcd_timv 0x%x\n", fbi->regs.lcd_timv);
 	
 }
 
@@ -310,7 +340,7 @@ static void lpc1788fb_activate_var(struct fb_info *info)
 	dprintk("%s: var->bpp   = %d\n", __func__, var->bits_per_pixel);
 
 	if (type == LPC178X_LCD_TFT) {
-		lpc1788fb_calculate_tft_lcd_regs(info, &fbi->regs);
+		lpc1788fb_calculate_tft_lcd_regs(info);
 		--clkdiv;
 		if (clkdiv < 0)
 			clkdiv = 0;
@@ -318,7 +348,7 @@ static void lpc1788fb_activate_var(struct fb_info *info)
 		printk("not LPC178X_LCD_TFT\n");
 	}
 
-	LPC178X_SCC->lcd_cfg = clk_div;
+	LPC178X_SCC->lcd_cfg = clkdiv;
 
 	/* write new registers */
 
@@ -328,10 +358,12 @@ static void lpc1788fb_activate_var(struct fb_info *info)
 	fbi->regs.lcd_pol &= ~(LPC178X_LCD_CPL_MASK);
 	fbi->regs.lcd_pol |= (var->xres - 1)<<16;
 	writel(fbi->regs.lcd_pol, regs + LPC178X_LCD_POL);
+	dprintk("lcd_pol = 0x%x\n", fbi->regs.lcd_pol);
 
 	/* set lcd address pointers */
 	writel(info->fix.smem_start, regs + LPC178X_LCD_UPBASE);
 	writel(info->fix.smem_start, regs + LPC178X_LCD_LPBASE);
+	dprintk("lcd_upbase = 0x%x\n", info->fix.smem_start);
 
 	/* enable lcd control */
 	//lcdctrl = readl(regs + LPC178X_LCD_CTRL);
@@ -340,6 +372,7 @@ static void lpc1788fb_activate_var(struct fb_info *info)
 	for(delay=0; delay<10000; delay++);
 	fbi->regs.lcd_ctrl |= (0x1<<11);
 	writel(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);	
+	dprintk("lcd_ctrl = 0x%x\n", fbi->regs.lcd_ctrl);
 	
 }
 
@@ -352,17 +385,20 @@ static int lpc1788fb_set_par(struct fb_info *info)
 	case 16:
 	case 12:
 		info->fix.visual = FB_VISUAL_TRUECOLOR;
+		dprintk("FB_VISUAL_TRUECOLOR\n");
 		break;
 	case 1:
 		info->fix.visual = FB_VISUAL_MONO01;
+		dprintk("FB_VISUAL_MONO01\n");
 		break;
 	default:
 		info->fix.visual = FB_VISUAL_PSEUDOCOLOR;
+		dprintk("FB_VISUAL_PSEUDOCOLOR\n");
 		break;
 	}
 
 	info->fix.line_length = (var->xres_virtual * var->bits_per_pixel) / 8;
-
+	dprintk("line_length = %d\n", info->fix.line_length);
 	/* activate this new configuration */
 
 	lpc1788fb_activate_var(info);
@@ -424,13 +460,13 @@ static inline void lpc1788fb_unmap_video_memory(struct fb_info *info)
 
 static int lpc1788fb_init_registers(struct fb_info *info)
 {
-        struct lpc1788fb_info *fbi;
+    struct lpc1788fb_info *fbi;
 	void __iomem *regs = fbi->io;
 
-	fbi->regs.lcd_crsr  = 0;
+	fbi->regs.crsr_ctrl  = 0;
 	
-	writel(fbi->regs.lcd_crsr, regs + LPC178X_LCD_CRSR_CTRL);	
-
+	writel(fbi->regs.crsr_ctrl, regs + LPC178X_LCD_CRSR_CTRL);	
+	dprintk("crsr_ctrl = 0x%x\n", fbi->regs.crsr_ctrl);
 
 }
 
@@ -454,8 +490,8 @@ static irqreturn_t lpc1788fb_irq(int irq, void *dev_id)
 }
 
 
-static int __init lpc1788fb_probe(struct platform_device *pdev,
-				  enum s3c_drv_type drv_type){
+static int __init lpc1788fb_probe(struct platform_device *pdev)
+{
 
 	struct lpc1788fb_info *info;
 	struct lpc1788fb_display *display;
@@ -463,9 +499,13 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 	struct lpc1788fb_mach_info *mach_info;
 	struct resource *res;
 	int irq;
+	int ret;
 	int size;
+	int i;
 	unsigned long lcdctrl;
 	volatile int delay;
+
+	dprintk("lpc1788fb_probe\n");
 
 	mach_info = pdev->dev.platform_data;
 	if (mach_info == NULL) {
@@ -496,7 +536,7 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 
 	info = fbinfo->par;
 	info->dev = &pdev->dev;
-	info->drv_type = drv_type;
+	//info->drv_type = drv_type;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
@@ -536,11 +576,9 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 
 	//disable LCD 
 	//lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
-	info->regs.lcd_ctrl &= ~(0x1<<11);
-	writel(info->regs.lcd_ctrl & ~(0x1<<11), info->io + LPC178X_LCD_CTRL);	
-	for(delay=0; delay<10000; delay++);
-	info->regs.lcd_ctrl &= ~(0x1<<0);
-	writel(info->regs.lcd_ctrl, info->io + LPC178X_LCD_CTRL);	
+	info->regs.lcd_ctrl = display->lcdctrl;
+	info->regs.lcd_pol = display->lcdpol;
+    lpc1788fb_lcd_enable(info, 0);
 
 	fbinfo->fix.type            = FB_TYPE_PACKED_PIXELS;
 	fbinfo->fix.type_aux        = 0;
@@ -559,7 +597,7 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 	fbinfo->pseudo_palette      = &info->pseudo_pal;	
 
 	for (i = 0; i < 256; i++)
-                info->palette_buffer[i] = PALETTE_BUFF_CLEAR;
+		info->palette_buffer[i] = PALETTE_BUFF_CLEAR;
 #if 0
         ret = request_irq(irq, lpc1788fb_irq, IRQF_DISABLED, pdev->name, info);
         if (ret) {
@@ -588,6 +626,7 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 	fbinfo->var.xres = display->xres;
     fbinfo->var.yres = display->yres;
     fbinfo->var.bits_per_pixel = display->bpp;
+	dprintk("xres = %d, yres = %d, bits_per_pixel = %d\n", fbinfo->var.xres, fbinfo->var.yres, fbinfo->var.bits_per_pixel);
 
 	lpc1788fb_init_registers(fbinfo);
 
@@ -599,9 +638,11 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
                         ret);
                 goto free_cpufreq;
         }
-	
+
+	dprintk("lpc1788_probe finish\n");
 	return 0;
 
+free_cpufreq:
 free_video_memory:
         lpc1788fb_unmap_video_memory(fbinfo);
 release_clock:
@@ -621,6 +662,81 @@ dealloc_fb:
 
 }
 
+static int lpc1788fb_remove(struct platform_device *pdev)
+{
+	struct fb_info *fbinfo = platform_get_drvdata(pdev);
+	struct lpc1788fb_info *info = fbinfo->par;
+	int irq;
+
+	unregister_framebuffer(fbinfo);
+	//s3c2410fb_cpufreq_deregister(info);
+
+	lpc1788fb_lcd_enable(info, 0);
+	msleep(1);
+
+	lpc1788fb_unmap_video_memory(fbinfo);
+
+	if (info->clk) {
+		clk_disable(info->clk);
+		clk_put(info->clk);
+		info->clk = NULL;
+	}
+
+	irq = platform_get_irq(pdev, 0);
+	free_irq(irq, info);
+
+	iounmap(info->io);
+
+	release_resource(info->mem);
+	kfree(info->mem);
+
+	platform_set_drvdata(pdev, NULL);
+	framebuffer_release(fbinfo);
+
+	return 0;
+}
+
+#ifdef CONFIG_PM
+
+/* suspend and resume support for the lcd controller */
+static int lpc1788fb_suspend(struct platform_device *dev, pm_message_t state)
+{
+	struct fb_info	   *fbinfo = platform_get_drvdata(dev);
+	struct lpc1788fb_info *info = fbinfo->par;
+
+	lpc1788fb_lcd_enable(info, 0);
+
+	/* sleep before disabling the clock, we need to ensure
+	 * the LCD DMA engine is not going to get back on the bus
+	 * before the clock goes off again (bjd) */
+
+	msleep(1);
+	clk_disable(info->clk);
+
+	return 0;
+}
+
+static int lpc1788fb_resume(struct platform_device *dev)
+{
+	struct fb_info	   *fbinfo = platform_get_drvdata(dev);
+	struct lpc1788fb_info *info = fbinfo->par;
+
+	clk_enable(info->clk);
+	msleep(1);
+
+	lpc1788fb_init_registers(fbinfo);
+
+	/* re-activate our display after resume */
+	lpc1788fb_activate_var(fbinfo);
+	lpc1788fb_blank(FB_BLANK_UNBLANK, fbinfo);
+
+	return 0;
+}
+
+#else
+#define lpc1788fb_suspend NULL
+#define lpc1788fb_resume  NULL
+#endif
 
 static struct platform_driver lpc1788fb_driver = {
 	.probe		= lpc1788fb_probe,
@@ -631,13 +747,6 @@ static struct platform_driver lpc1788fb_driver = {
 		.name	= "dev:clcd",
 		.owner	= THIS_MODULE,
 	},
-	pr_debug("IO address start     :0x%08x\n", (u32) pldat->net_region_start);
-	pr_debug("IO address size      :%d\n", (u32) pldat->net_region_size);
-	pr_debug("IO address (mapped)  :0x%08x\n", (u32) pldat->net_base);
-	pr_debug("IRQ number           :%d\n", ndev->irq);
-	pr_debug("DMA buffer size      :%d\n", pldat->dma_buff_size);
-	pr_debug("DMA buffer P address :0x%08x\n", pldat->dma_buff_base_p);
-	pr_debug("DMA buffer V address :0x%08x\n", pldat->dma_buff_base_v);
 };
 
 int __init lpc1788fb_init(void){

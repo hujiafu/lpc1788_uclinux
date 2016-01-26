@@ -46,7 +46,7 @@
  * This is so because these variables are mistakenly swapped
  * in `clcdfb_decode()` in `include/linux/amba/clcd.h`.
  */
-
+#define CONFIG_LCD_INDEX0
 #ifdef CONFIG_LCD_INDEX0
 int	lcd_index = 0;
 #endif
@@ -141,12 +141,12 @@ struct platform_device lpc1788_device_lcd = {
 		.dma_mask	=	~0,
 		.coherent_dma_mask	=	~0,
 	}
-}
+};
 
 
-void __init lpc178x_fb_set_platdata(struct lpc1788fb_mach_info *pd)
+void __init lpc1788_fb_set_platdata(struct lpc1788fb_mach_info *pd)
 {               
-         struct lcp1788fb_mach_info *npd;
+         struct lpc1788fb_mach_info *npd;
                  
          npd = kmalloc(sizeof(*npd), GFP_KERNEL);
          if (npd) {
@@ -161,7 +161,7 @@ void __init lpc178x_fb_init(void)
 {
 	int i;
 	
-	lpc1788_fb_info.displays = &lpc1788_lcd_cfg[features.lcd_index];
+	lpc1788_fb_info.displays = &lpc1788_lcd_cfg[lcd_index];
 
 	for(i=0; i<ARRAY_SIZE(lpc1788_lcd_cfg); i++){
 		if (i == lcd_index){
@@ -170,9 +170,9 @@ void __init lpc178x_fb_init(void)
                                          lpc1788_lcd_cfg[i].height);
 
 		}else{
-			printk(" %d:%dx%d", li,
-                                         lpc1788_lcd_cfg[li].width,
-                                         lpc1788_lcd_cfg[li].height);
+			printk(" %d:%dx%d", i,
+                                         lpc1788_lcd_cfg[i].width,
+                                         lpc1788_lcd_cfg[i].height);
 		}
 	}
 
