@@ -1,4 +1,30 @@
 
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/errno.h>
+#include <linux/string.h>
+#include <linux/mm.h>
+#include <linux/slab.h>
+#include <linux/delay.h>
+#include <linux/fb.h>
+#include <linux/init.h>
+#include <linux/dma-mapping.h>
+#include <linux/interrupt.h>
+#include <linux/platform_device.h>
+#include <linux/clk.h>
+#include <linux/cpufreq.h>
+ 
+#include <asm/io.h>
+#include <asm/div64.h>
+ 
+#include <asm/mach/map.h>
+#include <mach/regs-lcd.h>
+#include <mach/regs-gpio.h>
+#include <mach/fb.h>
+
+#include "lpc1788fb.h"
+
+
 static int lpc1788fb_setcolreg(unsigned regno,
                                unsigned red, unsigned green, unsigned blue,
                                unsigned transp, struct fb_info *info)
@@ -57,16 +83,20 @@ static void lpc1788fb_lcd_enable(struct lpc1788fb_info *info, int enable)
         local_irq_save(flags);
 
         if (enable){
-		lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
-		writel(lcdctrl | (0x1<<0), info->io + LPC178X_LCD_CTRL);
+		//lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
+		info->regs.lcd_ctrl |= (0x1<<0);
+		writel(info->regs.lcd_ctrl, info->io + LPC178X_LCD_CTRL);
 		for(delay=0; delay<10000; delay++);
-		writel(lcdctrl | (0x1<<11), info->io + LPC178X_LCD_CTRL);	
+		info->regs.lcd_ctrl |= (0x1<<0);
+		writel(info->regs.lcd_ctrl, info->io + LPC178X_LCD_CTRL);	
         }
 	else{
-		lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
-		writel(lcdctrl & ~(0x1<<11), info->io + LPC178X_LCD_CTRL);	
+		//lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
+		info->regs.lcd_ctrl &= ~(0x1<<11);
+		writel(info->regs.lcd_ctrl, info->io + LPC178X_LCD_CTRL);	
 		for(delay=0; delay<10000; delay++);
-		writel(lcdctrl & ~(0x1<<0), info->io + LPC178X_LCD_CTRL);	
+		info->regs.lcd_ctrl &= ~(0x1<<0);
+		writel(info->regs.lcd_ctrl, info->io + LPC178X_LCD_CTRL);	
 	}
 
         local_irq_restore(flags);
@@ -156,7 +186,7 @@ static int lpc1788fb_check_var(struct fb_var_screeninfo *var,
 		var->blue	= var->red;
 		break;
 	case 8:
-		if (display->type != S3C2410_LCDCON1_TFT) {
+		if (display->lcdctrl != LPC178X_LCD_TFT) {
 			/* 8 bpp 332 */
 			var->red.length		= 3;
 			var->red.offset		= 5;
@@ -183,7 +213,7 @@ static int lpc1788fb_check_var(struct fb_var_screeninfo *var,
 
 	default:
 	case 16:
-		if (display->lcdpol & LPC178X_LCD_16BPP_565) {
+		if (display->lcdctrl & LPC178X_LCD_16BPP_565) {
 			/* 16 bpp, 565 format */
 			var->red.offset		= 11;
 			var->green.offset	= 5;
@@ -225,7 +255,7 @@ static void lpc1788fb_calculate_tft_lcd_regs(const struct fb_info *info,
 
 	switch (var->bits_per_pixel) {
 	case 16:
-		readl(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);
+		//readl(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);
 		fbi->regs.lcd_ctrl &= ~LPC178X_LCD_FMT_CLEAR;
 		fbi->regs.lcd_ctrl |= LPC178X_LCD_16BPP_565;
 		writel(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);
@@ -268,11 +298,10 @@ static void lpc1788fb_activate_var(struct fb_info *info)
 {
 	struct lpc1788fb_info *fbi = info->par;
 	void __iomem *regs = fbi->io;
-	int type = fbi->regs.lcdctrl & LPC178X_LCD_TFT;
+	int type = fbi->regs.lcd_ctrl & LPC178X_LCD_TFT;
 	struct fb_var_screeninfo *var = &info->var;
 	int clkdiv;
 	volatile int delay;
-	unsigned long lcdctrl;
 
 	clkdiv = LPC178X_LCD_CLK_FRE / (var->pixclock);
 
@@ -305,10 +334,12 @@ static void lpc1788fb_activate_var(struct fb_info *info)
 	writel(info->fix.smem_start, regs + LPC178X_LCD_LPBASE);
 
 	/* enable lcd control */
-	lcdctrl = readl(regs + LPC178X_LCD_CTRL);
-	writel(lcdctrl | (0x1<<0), regs + LPC178X_LCD_CTRL);
+	//lcdctrl = readl(regs + LPC178X_LCD_CTRL);
+	fbi->regs.lcd_ctrl |= (0x1<<0);
+	writel(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);
 	for(delay=0; delay<10000; delay++);
-	writel(lcdctrl | (0x1<<11), regs + LPC178X_LCD_CTRL);	
+	fbi->regs.lcd_ctrl |= (0x1<<11);
+	writel(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);	
 	
 }
 
@@ -393,6 +424,12 @@ static inline void lpc1788fb_unmap_video_memory(struct fb_info *info)
 
 static int lpc1788fb_init_registers(struct fb_info *info)
 {
+        struct lpc1788fb_info *fbi;
+	void __iomem *regs = fbi->io;
+
+	fbi->regs.lcd_crsr  = 0;
+	
+	writel(fbi->regs.lcd_crsr, regs + LPC178X_LCD_CRSR_CTRL);	
 
 
 }
@@ -402,7 +439,8 @@ static irqreturn_t lpc1788fb_irq(int irq, void *dev_id)
 {
         struct lpc1788fb_info *fbi = dev_id;
         void __iomem *irq_base = fbi->irq_base;
-        unsigned long lcdirq = readl(irq_base + S3C24XX_LCDINTPND);
+ #if 0
+	 unsigned long lcdirq = readl(irq_base + S3C24XX_LCDINTPND);
  
         if (lcdirq & S3C2410_LCDINT_FRSYNC) {
                 if (fbi->palette_ready)
@@ -411,7 +449,7 @@ static irqreturn_t lpc1788fb_irq(int irq, void *dev_id)
                 writel(S3C2410_LCDINT_FRSYNC, irq_base + S3C24XX_LCDINTPND);
                 writel(S3C2410_LCDINT_FRSYNC, irq_base + S3C24XX_LCDSRCPND);
         }
- 
+ #endif
         return IRQ_HANDLED;
 }
 
@@ -497,10 +535,12 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 	strcpy(fbinfo->fix.id, driver_name);
 
 	//disable LCD 
-	lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
-	writel(lcdctrl & ~(0x1<<11), info->io + LPC178X_LCD_CTRL);	
+	//lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
+	info->regs.lcd_ctrl &= ~(0x1<<11);
+	writel(info->regs.lcd_ctrl & ~(0x1<<11), info->io + LPC178X_LCD_CTRL);	
 	for(delay=0; delay<10000; delay++);
-	writel(lcdctrl & ~(0x1<<0), info->io + LPC178X_LCD_CTRL);	
+	info->regs.lcd_ctrl &= ~(0x1<<0);
+	writel(info->regs.lcd_ctrl, info->io + LPC178X_LCD_CTRL);	
 
 	fbinfo->fix.type            = FB_TYPE_PACKED_PIXELS;
 	fbinfo->fix.type_aux        = 0;
@@ -520,14 +560,14 @@ static int __init lpc1788fb_probe(struct platform_device *pdev,
 
 	for (i = 0; i < 256; i++)
                 info->palette_buffer[i] = PALETTE_BUFF_CLEAR;
-
+#if 0
         ret = request_irq(irq, lpc1788fb_irq, IRQF_DISABLED, pdev->name, info);
         if (ret) {
                 dev_err(&pdev->dev, "cannot get irq %d - err %d\n", irq, ret);
                 ret = -EBUSY;
                 goto release_regs;
         }
-
+#endif
 	info->clk_rate = clk_get_rate(info->clk);
 
 	        /* find maximum required memory size for display */
@@ -611,3 +651,4 @@ static void __exit lpc1788fb_cleanup(void){
 
 module_init(lpc1788fb_init);
 module_exit(lpc1788fb_cleanup);
+
