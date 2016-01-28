@@ -515,7 +515,7 @@ int fb_init_device(struct fb_info *fb_info)
 
 	for (i = 0; i < ARRAY_SIZE(device_attrs); i++) {
 		error = device_create_file(fb_info->dev, &device_attrs[i]);
-
+		printk("device_create_file\n");
 		if (error)
 			break;
 	}

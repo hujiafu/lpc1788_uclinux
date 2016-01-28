@@ -177,4 +177,5 @@ void __init lpc178x_fb_init(void)
 	}
 
 	lpc1788_fb_set_platdata(&lpc1788_fb_info);
+	platform_device_register(&lpc1788_device_lcd);
 }

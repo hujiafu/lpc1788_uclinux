@@ -35,7 +35,7 @@ static int debug	= 1;
 static int debug	= 0;
 #endif
 
-#define dprintk(msg...)	if (debug) { printk(KERN_DEBUG "lpc1788fb: " msg); }
+#define dprintk(msg...)	if (debug) { printk("lpc1788fb: " msg); }
 
 
 static inline unsigned int chan_to_field(unsigned int chan,
@@ -460,7 +460,7 @@ static inline void lpc1788fb_unmap_video_memory(struct fb_info *info)
 
 static int lpc1788fb_init_registers(struct fb_info *info)
 {
-    struct lpc1788fb_info *fbi;
+    	struct lpc1788fb_info *fbi = info->par;
 	void __iomem *regs = fbi->io;
 
 	fbi->regs.crsr_ctrl  = 0;
@@ -560,14 +560,14 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
 		goto release_mem;
 	}
 	
-	display->clk = clk_get(&pdev->dev, NULL);
+	info->clk = clk_get(&pdev->dev, NULL);
         if (!info->clk || IS_ERR(info->clk)) {
                 printk(KERN_ERR "failed to get lcd clock source\n");
                 ret = -ENOENT;
                 goto release_irq;
         }
 
-	clk_enable(display->clk); //enable LCD POWER
+	clk_enable(info->clk); //enable LCD POWER
 	msleep(1);
 	
 	info->irq_base = info->io;
@@ -618,6 +618,9 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
                 if (fbinfo->fix.smem_len < smem_len)
                         fbinfo->fix.smem_len = smem_len;
         }
+	//printk("lpc1788_fb debug 2\n");
+        //ret = -ENOENT;
+	//return ret;
 
 	ret = lpc1788fb_map_video_memory(fbinfo);
 
@@ -638,6 +641,13 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
                         ret);
                 goto free_cpufreq;
         }
+
+
+
+	//ret = device_create_file(&pdev->dev, &dev_attr_debug);
+         //if (ret) {
+           //     printk("failed to add debug attribute\n");
+          //}
 
 	dprintk("lpc1788_probe finish\n");
 	return 0;
@@ -750,7 +760,7 @@ static struct platform_driver lpc1788fb_driver = {
 };
 
 int __init lpc1788fb_init(void){
-
+	printk("lpc1788:lpc1788fb_init\n");
 	int ret = platform_driver_register(&lpc1788fb_driver);
 }
 
