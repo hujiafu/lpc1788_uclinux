@@ -677,6 +677,8 @@ static int lpc1788fb_remove(struct platform_device *pdev)
 	struct fb_info *fbinfo = platform_get_drvdata(pdev);
 	struct lpc1788fb_info *info = fbinfo->par;
 	int irq;
+	
+	dprintk("lpc1788fb_remove\n");
 
 	unregister_framebuffer(fbinfo);
 	//s3c2410fb_cpufreq_deregister(info);

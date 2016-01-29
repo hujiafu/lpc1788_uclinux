@@ -1525,16 +1525,19 @@ register_framebuffer(struct fb_info *fb_info)
 	fb_info->node = i;
 	mutex_init(&fb_info->lock);
 	mutex_init(&fb_info->mm_lock);
-
+	
+	printk("fb%d create\n", i);
 	fb_info->dev = device_create(fb_class, fb_info->device,
 				     MKDEV(FB_MAJOR, i), NULL, "fb%d", i);
 	if (IS_ERR(fb_info->dev)) {
 		/* Not fatal */
 		printk(KERN_WARNING "Unable to create device for framebuffer %d; errno = %ld\n", i, PTR_ERR(fb_info->dev));
 		fb_info->dev = NULL;
-	} else
+	} else{
+		printk("fb%d create success\n", i);
 		fb_init_device(fb_info);
-
+	
+	}
 	if (fb_info->pixmap.addr == NULL) {
 		fb_info->pixmap.addr = kmalloc(FBPIXMAPSIZE, GFP_KERNEL);
 		if (fb_info->pixmap.addr) {
@@ -1676,6 +1679,7 @@ fbmem_init(void)
 		printk(KERN_WARNING "Unable to create fb class; errno = %ld\n", PTR_ERR(fb_class));
 		fb_class = NULL;
 	}
+	printk("fbmem_init ok\n");
 	return 0;
 }
 
