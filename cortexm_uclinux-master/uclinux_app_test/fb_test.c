@@ -10,6 +10,12 @@ int main()
 	int fp = 0;
 	struct fb_var_screeninfo vinfo;
 	struct fb_fix_screeninfo finfo;
+	
+	fp = 1;
+
+	return 0;
+
+#if 0
 	fp = open("/dev/fb0", O_RDWR);
 
 	if(fp < 0){
@@ -33,4 +39,6 @@ int main()
 	printf("The yres is :%d\n", vinfo.yres);
 	printf("bits_per_pixel is :%d\n", vinfo.bits_per_pixel);
 	close(fp);
+#endif
 }
+

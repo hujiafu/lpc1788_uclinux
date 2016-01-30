@@ -1,13 +1,14 @@
 COMPILE := ../cross_tools/arm-2010q1-uclinux/bin/arm-uclinuxeabi-
 CC := $(COMPILE)gcc
 
-CFLAGS := -Wall -O2
+EXEC = fbtest
+OBJS = fb_test.o
+CFLAGS +=
+LDFLAGS += -elf2flt
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o fb_test.o fb_test.c
-
-fbtest: fb_test.o
-	$(CC) $(FLAGS) -o $@ fb_test.o
+all: $(EXEC)
+$(EXEC): $(OBJS)
+	$(CC) $(LDFLAGS) -o $@ $(OBJS)
 
 clean:
-	rm -rf *.o fbtest
+	-rm -f $(EXEC) *.elf *.gdb *.o
