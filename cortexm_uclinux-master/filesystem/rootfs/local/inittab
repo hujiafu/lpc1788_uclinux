@@ -1,3 +1,4 @@
 ::sysinit:/etc/rc
-ttyS0::respawn:/bin/hush -i
-ttyS0::respawn:mdev -s
+ttyS0::wait:mdev -s
+ttyS0::once:/bin/hush -i
+ttyS0::once:/bin/fbtest

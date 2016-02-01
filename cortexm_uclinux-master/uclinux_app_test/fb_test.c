@@ -1,17 +1,15 @@
-#include <unistd.h>
+//#include <unistd.h>
 #include <stdio.h>
-#include <fcntl.h>
-#include <linux/fb.h>
-#include <sys/mman.h>
-#include <stdlib.h>
+//#include <fcntl.h>
+//#include <linux/fb.h>
+//#include <sys/mman.h>
+//#include <stdlib.h>
 
 int main()
 {
-	int fp = 0;
-	struct fb_var_screeninfo vinfo;
-	struct fb_fix_screeninfo finfo;
-	
-	fp = 1;
+	//struct fb_var_screeninfo vinfo;
+	//struct fb_fix_screeninfo finfo;
+	printf("Hello world\n");
 
 	return 0;
 

@@ -50,9 +50,12 @@ dir /mnt 777 0 0
 
 # busybox binary should be in the source tree.
 file /bin/busybox ../../filesystem/busybox-1.17.0/busybox 755 0 0
+file /bin/fbtest ../../uclinux_app_test/fbtest 755 0 0
+file /bin/fbtest.gdb ../../uclinux_app_test/fbtest.gdb 755 0 0
 
 slink /bin/init busybox 777 0 0
 slink /init /bin/init 777 0 0
+slink /bin/test fbtest 777 0 0
 file /etc/inittab ../../filesystem/rootfs/local/inittab 755 0 0
 
 file /etc/rc ../../filesystem/rootfs/local/rc 755 0 0
@@ -88,8 +91,6 @@ file /httpd/html/pi.c ../../filesystem/rootfs/local/html/pi.c 600 0 0
 file /httpd/html/pi.d ../../filesystem/rootfs/local/html/pi.d 600 0 0
 file /httpd/html/file.name ../../filesystem/rootfs/local/html/file.name 600 0 0
 file /httpd/html/test.name ../../filesystem/rootfs/local/html/test.name 600 0 0
-file /bin/fbtest ../../uclinux_app_test/fbtest 777 0 0
-file /bin/fbtest.gdb ../../uclinux_app_test/fbtest.gdb 777 0 0
 
 slink /bin/cat busybox 777 0 0
 slink /bin/hostname busybox 777 0 0
