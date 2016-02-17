@@ -1,5 +1,5 @@
 /*
- * Device driver for the SPI controller of the STM32F2/F4
+ * Device driver for the SPI controller of the LPC1788
  * Author: Vladimir Khusainov, vlad@emcraft.com
  * Copyright 2013 Emcraft Systems
  *
@@ -25,18 +25,18 @@
 #include <linux/wait.h>
 #include <linux/delay.h>
 #include <linux/spi/spi.h>
-#include <linux/spi/spi_stm32.h>
+#include <linux/spi/spi_lpc1788.h>
 #include <mach/platform.h>
-#include <mach/stm32.h>
+#include <mach/lpc1788.h>
 #include <mach/iomux.h>
 
 /*
- * Debug output control. While debugging, have SPI_STM32_DEBUG defined.
- * In deployment, make sure that SPI_STM32_DEBUG is undefined
+ * Debug output control. While debugging, have SPI_LPC1788_DEBUG defined.
+ * In deployment, make sure that SPI_LPC1788_DEBUG is undefined
  * to avoid the performance and size overhead of debug messages.
  */
 #define SPI_LPC1788_DEBUG
-#if 1
+#if 0
 #undef SPI_LPC1788_DEBUG
 #endif
 
@@ -45,7 +45,7 @@
 /*
  * Driver verbosity level: 0->silent; >0->verbose (1 to 4, growing verbosity)
  */
-static int spi_lpc1788_debug = 0;
+static int spi_lpc1788_debug = 4;
 
 /*
  * User can change verbosity of the driver (when loading the module,
@@ -102,7 +102,7 @@ struct spi_lpc1788 {
 	struct list_head 		queue;		/* Message Q */
 	struct work_struct		work;		/* Work Q */
 	struct workqueue_struct *	workqueue;	/* Work Q */
-#if !defined(CONFIG_SPI_STM32_POLLED)
+#if !defined(CONFIG_SPI_LPC1788_POLLED)
 	wait_queue_head_t		wait;		/* Wait queue */
 	int				irq;		/* IRQ # */
 #endif
@@ -146,34 +146,20 @@ struct reg_spi {
 /*
  * Some bits in various CSRs 
  */
-#define RCC_APB1RSTR_SPI2		(1<<14)
-#define RCC_APB1RSTR_SPI3		(1<<15)
-#define RCC_APB1ENR_SPI2		(1<<14)
-#define RCC_APB1ENR_SPI3		(1<<15)
-#define RCC_APB2RSTR_SPI1		(1<<12)
-#define RCC_APB2RSTR_SPI4		(1<<13)
-#define RCC_APB2RSTR_SPI5		(1<<20)
-#define RCC_APB2RSTR_SPI6		(1<<21)
-#define RCC_APB2ENR_SPI1		(1<<12)
-#define RCC_APB2ENR_SPI4		(1<<13)
-#define RCC_APB2ENR_SPI5		(1<<20)
-#define RCC_APB2ENR_SPI6		(1<<21)
-#define SPI_CR1_DFF			(1<<11)
-#define SPI_CR1_SSM			(1<<9)
-#define SPI_CR1_SSI			(1<<8)
-#define SPI_CR1_SPE			(1<<6)
-#define SPI_CR1_BR(x)			((x)<<3)
-#define SPI_CR1_MSTR			(1<<2)
-#define SPI_CR1_CPOL			(1<<1)
-#define SPI_CR1_CPHA			(1<<0)
-#define SPI_CR2_TXEIE			(1<<7)
-#define SPI_CR2_RXNEIE			(1<<6)
-#define SPI_CR2_ERRIE			(1<<5)
-#define SPI_SR_FRE			(1<<8)
-#define SPI_SR_BSY			(1<<7)
-#define SPI_SR_OVR			(1<<6)
-#define SPI_SR_UDR			(1<<3)
-
+#define LPC1788_SPI_ICR_RORIC		(1<<0)
+#define LPC1788_SPI_ICR_RTIC		(1<<1)
+#define LPC1788_SPI_MIS_RXMIS		(1<<2)
+#define LPC1788_SPI_MIS_RTMIS		(1<<1)
+#define LPC1788_SPI_MIS_RORMIS		(1<<0)
+#define LPC1788_SPI_IMSC_RXIM		(1<<2)
+#define LPC1788_SPI_IMSC_RORIM		(1<<0)
+#define LCP1788_SPI_CR1_MSTR		(1<<2)
+#define LPC1788_SPI_CR1_SSE			(1<<1)
+#define LPC1788_SPI_CR0_CPOL		(1<<6)
+#define LPC1788_SPI_CR0_CPHA		(1<<7)
+#define LPC1788_SPI_CLR_DSS			(0xf<<0)
+#define LPC1788_SPI_RORRIS			(1<<0)
+#define LPC1788_SPI_RORIC			(1<<0)
 #define LPC1788_SPI_SR_TXE			(1<<0)
 #define LPC1788_SPI_SR_TNF			(1<<1)
 #define LPC1788_SPI_SR_RXNE			(1<<2)
@@ -183,70 +169,23 @@ struct reg_spi {
  * @param c		controller data structure
  * @returns		0->success, <0->error code
  */
-static int spi_lpc1788_hw_init(struct spi_stm32 *c)
+static int spi_lpc1788_hw_init(struct spi_lpc1788 *c)
 {
 	unsigned int v;
 	int ret = 0;
 
-	/*
- 	 * Reset the SPI controller and then bring it out of reset.
- 	 * Enable the SPI controller clock.
- 	 */
-	if (c->bus == 0) {		/* SPI1 */
-		v = readl(&STM32_RCC->apb2rstr);
-		writel(v | RCC_APB2RSTR_SPI1, &STM32_RCC->apb2rstr);
-		writel(v & ~RCC_APB2RSTR_SPI1, &STM32_RCC->apb2rstr);
-		v = readl(&STM32_RCC->apb2enr);
-		writel(v | RCC_APB2ENR_SPI1, &STM32_RCC->apb2enr);
-	}
-	else if (c->bus == 1) {		/* SPI2 */
-		v = readl(&STM32_RCC->apb1rstr);
-		writel(v | RCC_APB1RSTR_SPI2, &STM32_RCC->apb1rstr);
-		writel(v & ~RCC_APB1RSTR_SPI2, &STM32_RCC->apb1rstr);
-		v = readl(&STM32_RCC->apb1enr);
-		writel(v | RCC_APB1ENR_SPI2, &STM32_RCC->apb1enr);
-	}
-	else if (c->bus == 2) {		/* SPI3 */
-		v = readl(&STM32_RCC->apb1rstr);
-		writel(v | RCC_APB1RSTR_SPI3, &STM32_RCC->apb1rstr);
-		writel(v & ~RCC_APB1RSTR_SPI3, &STM32_RCC->apb1rstr);
-		v = readl(&STM32_RCC->apb1enr);
-		writel(v | RCC_APB1ENR_SPI3, &STM32_RCC->apb1enr);
-	}
-	else if (c->bus == 3) {		/* SPI4 */
-		v = readl(&STM32_RCC->apb2rstr);
-		writel(v | RCC_APB2RSTR_SPI4, &STM32_RCC->apb2rstr);
-		writel(v & ~RCC_APB2RSTR_SPI4, &STM32_RCC->apb2rstr);
-		v = readl(&STM32_RCC->apb2enr);
-		writel(v | RCC_APB2ENR_SPI4, &STM32_RCC->apb2enr);
-	}
-	else if (c->bus == 4) {		/* SPI5 */
-		v = readl(&STM32_RCC->apb2rstr);
-		writel(v | RCC_APB2RSTR_SPI5, &STM32_RCC->apb2rstr);
-		writel(v & ~RCC_APB2RSTR_SPI5, &STM32_RCC->apb2rstr);
-		v = readl(&STM32_RCC->apb2enr);
-		writel(v | RCC_APB2ENR_SPI5, &STM32_RCC->apb2enr);
-	}
-	else if (c->bus == 5) {		/* SPI6 */
-		v = readl(&STM32_RCC->apb2rstr);
-		writel(v | RCC_APB2RSTR_SPI6, &STM32_RCC->apb2rstr);
-		writel(v & ~RCC_APB2RSTR_SPI6, &STM32_RCC->apb2rstr);
-		v = readl(&STM32_RCC->apb2enr);
-		writel(v | RCC_APB2ENR_SPI6, &STM32_RCC->apb2enr);
-	}
+	printk("spi%d hardware init\n", c->bus);
 
 	/*
  	 * Set the master mode
  	 */
-	writel(SPI_CR1_MSTR, &SPI(c)->spi_cr1);
+	writel(LPC1788_SPI_CR1_MSTR, &SPI(c)->spi_cr1);
 
 	/*
 	 * Software chip select management, NSS pin can be re-used as a GPIO.
 	 * Software is responsible for driving CS (which can be NSS or any
 	 * other GPIO) appropriately.
 	 */
-	writel(SPI_CR1_SSM | SPI_CR1_SSI | readl(&SPI(c)->spi_cr1), 
-		&SPI(c)->spi_cr1);
 
 	/*
  	 * Set the transfer protocol. We are using the Motorola
@@ -258,15 +197,14 @@ static int spi_lpc1788_hw_init(struct spi_stm32 *c)
 	/*
  	 * If PIO interrupt-driven, enable interrupts
  	 */
-#if !defined(CONFIG_SPI_STM32_POLLED)
-	writel(SPI_CR2_RXNEIE | SPI_CR2_ERRIE | readl(&SPI(c)->spi_cr2), 
-		&SPI(c)->spi_cr2);
+#if !defined(CONFIG_SPI_LPC1788_POLLED)
+	writel(LPC1788_SPI_IMSC_RXIM | LPC1788_SPI_IMSC_RORIM | readl(&SPI(c)->spi_imsc), &SPI(c)->spi_imsc);
 #endif
 
 	/*
  	 * Enable the SPI contoller
  	 */
-	writel(SPI_CR1_SPE | readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
+	writel(LPC1788_SPI_CR1_SSE | readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
 
 	d_printk(2, "bus=%d,spi_cr1=0x%x,ret=%d\n", 
 		 c->bus, readl(&SPI(c)->spi_cr1), ret);
@@ -298,8 +236,8 @@ static int spi_lpc1788_hw_cs_max(struct spi_lpc1788 *c)
  * @param activate	1->CS=low (activated); 0->CS=high (deactivated)
  * @returns		0->good,!=0->bad
  */
-static inline int spi_stm32_hw_cs_set(
-	struct spi_stm32 *c, int n, int activate)
+static inline int spi_lpc1788_hw_cs_set(
+	struct spi_lpc1788 *c, int n, int activate)
 {
 	int ret = 0;
 
@@ -319,7 +257,7 @@ static inline int spi_stm32_hw_cs_set(
  * @param spd		clock rate in Hz
  * @returns		0->good,!=0->bad
  */
-static inline int spi_stm32_hw_clk_set(struct spi_stm32 *c, unsigned int spd)
+static inline int spi_lpc1788_hw_clk_set(struct spi_lpc1788 *c, unsigned int spd)
 {
 	int i;
 	unsigned int h = c->speed_hz;
@@ -328,14 +266,14 @@ static inline int spi_stm32_hw_clk_set(struct spi_stm32 *c, unsigned int spd)
 	/*
  	 * Calculate the clock rate that works for this slave
  	 */
-	for (i = 1; i <= 8; i ++) {
-		if (h / (1 << i) <= spd) break;
+	for (i = 2; i <= 254; i+=2) {
+		if (h / i <= spd) break;
 	}
 
 	/*
  	 * Can't provide a rate that is slow enough for the slave
  	 */
-	if (i == 9) {
+	if (i == 254) {
 		ret = -EIO;
 		goto Done;
 	}
@@ -343,13 +281,13 @@ static inline int spi_stm32_hw_clk_set(struct spi_stm32 *c, unsigned int spd)
 	/*
  	 * Set the clock rate
  	 */
-	writel((SPI_CR1_BR(i-1)) | readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
+	writel(i, &SPI(c)->spi_cpsr);
 
 Done:
 	d_printk(1, "bus=%d,cnt_hz=%d,slv_hz=%d,rsl_hz=%d,"
 		"i=%d,cr1=%x,ret=%d\n",
 		c->bus, h, spd, h / (1 << i), i-1, 
-		readl(&SPI(c)->spi_cr1), ret);
+		readl(&SPI(c)->spi_cpsr), ret);
 	return ret;
 }
 
@@ -359,12 +297,15 @@ Done:
  * @param bt		frame size
  * @returns		0->good,!=0->bad
  */
-static inline int spi_stm32_hw_bt_check(struct spi_stm32 *c, int bt)
+static inline int spi_lpc1788_hw_bt_check(struct spi_lpc1788 *c, int bt)
 {
 	/*
-	 * Only 8 or 16 bit supported
+	 *  4 to 16 bit supported
 	 */
-	int ret = 8 == bt || bt == 16 ? 0 : 1;
+	int ret = 0
+		
+	if(bt < 4 || bt > 16)
+	  ret = 1;
 
 	d_printk(2, "bus=%d,bt=%d,ret=%d\n", c->bus, bt, ret);
 	return ret;
@@ -377,21 +318,22 @@ static inline int spi_stm32_hw_bt_check(struct spi_stm32 *c, int bt)
  * @param bt		frame size
  * @returns		0->good,!=0->bad
  */
-static inline int spi_stm32_hw_bt_set(struct spi_stm32 *c, int bt)
+static inline int spi_lpc1788_hw_bt_set(struct spi_lpc1788 *c, int bt)
 {
-	unsigned int v = readl(&SPI(c)->spi_cr1);
+	unsigned int v = readl(&SPI(c)->spi_cr0);
 	int ret = 0;
 
-	if (bt == 8) {
-		v &= ~SPI_CR1_DFF;
-	}
-	else {
-		v |= SPI_CR1_DFF;
-	}
-	writel(v, &SPI(c)->spi_cr1);
 
-	d_printk(2, "bus=%d,bt=%d,spi_cr1=%x,ret=%d\n", 
-		 c->bus, bt, readl(&SPI(c)->spi_cr1), ret);
+	v &= ~LPC1788_SPI_CLR_DSS;
+
+	if(bt < 4 || bt > 16){
+		ret = -EIO;
+	}else{
+		v |= ((bt-1) << 0);
+		writel(v, &SPI(c)->spi_cr0);
+		d_printk(2, "bus=%d,bt=%d,spi_cr1=%x,ret=%d\n",  c->bus, bt, readl(&SPI(c)->spi_cr0), ret);
+	}
+
 	return ret;
 }
 
@@ -400,11 +342,22 @@ static inline int spi_stm32_hw_bt_set(struct spi_stm32 *c, int bt)
  * @param c		controller data structure
  * @param len		transfer size
  */
-static inline void spi_stm32_hw_tfsz_set(struct spi_stm32 *c, int len)
+static inline void spi_lpc1788_hw_tfsz_set(struct spi_lpc1788 *c, int len)
 {
 	/*
 	 * This is a dummy for PIO mode
 	 */
+}
+
+
+static inline void spi_lpc1788_hw_enable(struct spi_lpc1788 *c)
+{
+	writel(LPC1788_SPI_CR1_SSE & readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
+}
+
+static inline void spi_lpc1788_hw_disable(struct spi_lpc1788 *c)
+{
+	writel(~LPC1788_SPI_CR1_SSE & readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
 }
 
 /*
@@ -413,42 +366,30 @@ static inline void spi_stm32_hw_tfsz_set(struct spi_stm32 *c, int len)
  * @param mode		mode
  * @returns		0->good;!=0->bad
  */
-static inline int spi_stm32_hw_mode_set(struct spi_stm32 *c, unsigned int mode)
+static inline int spi_lpc1788_hw_mode_set(struct spi_lpc1788 *c, unsigned int mode)
 {
 	int ret = 0;
 
-	/*
- 	 * Disable the SPI contoller 
- 	 */
-	writel(~SPI_CR1_SPE & readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
 
 	/*
  	 * Set the mode
  	 */
 	if (mode & SPI_CPHA) {
-		writel(SPI_CR1_CPHA | readl(&SPI(c)->spi_cr1),
-			&SPI(c)->spi_cr1);
+		writel(LPC1788_SPI_CR0_CPHA | readl(&SPI(c)->spi_cr0), &SPI(c)->spi_cr0);
 	}
 	else {
-		writel(~SPI_CR1_CPHA & readl(&SPI(c)->spi_cr1),
-			&SPI(c)->spi_cr1);
+		writel(~LPC1788_SPI_CR0_CPHA & readl(&SPI(c)->spi_cr0), &SPI(c)->spi_cr0);
 	}
 	if (mode & SPI_CPOL) {
-		writel(SPI_CR1_CPOL | readl(&SPI(c)->spi_cr1),
-			&SPI(c)->spi_cr1);
+		writel(LPC1788_SPI_CR0_CPOL | readl(&SPI(c)->spi_cr0), &SPI(c)->spi_cr0);
 	}
 	else {
-		writel(~SPI_CR1_CPOL & readl(&SPI(c)->spi_cr1),
-			&SPI(c)->spi_cr1);
+		writel(~LPC1788_SPI_CR0_CPOL & readl(&SPI(c)->spi_cr0), &SPI(c)->spi_cr0);
 	}
 
-	/*
- 	 * Re-enable the SPI contoller 
- 	 */
-	writel(SPI_CR1_SPE | readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
 
-	d_printk(2, "bus=%d,mode=%x,spi_cr1=%x,ret=%d\n", 
-		 c->bus, mode, readl(&SPI(c)->spi_cr1), ret);
+	d_printk(2, "bus=%d,mode=%x,spi_cr0=%x,ret=%d\n", 
+		 c->bus, mode, readl(&SPI(c)->spi_cr0), ret);
 	return ret;
 }
 
@@ -457,7 +398,7 @@ static inline int spi_stm32_hw_mode_set(struct spi_stm32 *c, unsigned int mode)
  * @param c		controller data structure
  * @returns		!0->full;0->not full
  */
-static inline int spi_lpc1788_hw_txfifo_full(struct spi_stm32 *c)
+static inline int spi_lpc1788_hw_txfifo_full(struct spi_lpc1788 *c)
 {
 	return !(readl(&SPI(c)->spi_sr) & LPC1788_SPI_SR_TNF);
 }
@@ -469,8 +410,8 @@ static inline int spi_lpc1788_hw_txfifo_full(struct spi_stm32 *c)
  * @param tx		transmit buf (can be NULL)
  * @param i		index of frame in buf
  */
-static inline void spi_stm32_hw_txfifo_put(
-	struct spi_stm32 *c, int wb, const void *tx, int i)
+static inline void spi_lpc1788_hw_txfifo_put(
+	struct spi_lpc1788 *c, int wb, const void *tx, int i)
 {
 	int j;
 	unsigned int d = 0;
@@ -500,10 +441,9 @@ static inline int spi_lpc1788_hw_rxfifo_empty(struct spi_lpc1788 *c)
  * @param c		controller data structure
  * @returns		!0->error,0->no error
  */
-static inline int spi_stm32_hw_rxfifo_error(struct spi_stm32 *c)
+static inline int spi_lpc1788_hw_rxfifo_error(struct spi_lpc1788 *c)
 {
-	return readl(&SPI(c)->spi_sr) & 
-		(SPI_SR_FRE | SPI_SR_OVR | SPI_SR_UDR);
+	return readl(&SPI(c)->spi_ris) & (LPC1788_SPI_RORRIS);
 }
 
 /*
@@ -534,63 +474,23 @@ static inline void spi_lpc1788_hw_rxfifo_get(
  * @param rx		receive buf (can be NULL)
  * @param i		index of frame in buf
  */
-static inline void spi_stm32_hw_rxfifo_purge(struct spi_stm32 *c) 
+static inline void spi_lpc1788_hw_rxfifo_purge(struct spi_lpc1788 *c) 
 {
+	writel(LPC1788_SPI_RORRIS, &SPI(c)->spi_icr);
 }
 
 /*
  * Hardware shutdown of the SPI controller
  * @param c		controller data structure
  */
-static void spi_lpc1788_hw_release(struct spi_stm32 *c)
+static void spi_lpc1788_hw_release(struct spi_lpc1788 *c)
 {
 	unsigned int v;
 
 	/*
  	 * Disable the SPI contoller
  	 */
-	writel(~SPI_CR1_SPE & readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
-
-	/*
- 	 * Put the SPI controller into reset.
- 	 * Disable clock to the SPI controller.
- 	 */
-	if (c->bus == 0) {		/* SPI1 */
-		v = readl(&STM32_RCC->apb2rstr);
-		writel(v | RCC_APB2RSTR_SPI1, &STM32_RCC->apb2rstr);
-		v = readl(&STM32_RCC->apb2enr);
-		writel(v & ~RCC_APB2ENR_SPI1, &STM32_RCC->apb2enr);
-	}
-	else if (c->bus == 1) {		/* SPI2 */
-		v = readl(&STM32_RCC->apb1rstr);
-		writel(v | RCC_APB1RSTR_SPI2, &STM32_RCC->apb1rstr);
-		v = readl(&STM32_RCC->apb1enr);
-		writel(v & ~RCC_APB1ENR_SPI2, &STM32_RCC->apb1enr);
-	}
-	else if (c->bus == 2) {		/* SPI3 */
-		v = readl(&STM32_RCC->apb1rstr);
-		writel(v | RCC_APB1RSTR_SPI3, &STM32_RCC->apb1rstr);
-		v = readl(&STM32_RCC->apb1enr);
-		writel(v & ~RCC_APB1ENR_SPI3, &STM32_RCC->apb1enr);
-	}
-	else if (c->bus == 3) {		/* SPI4 */
-		v = readl(&STM32_RCC->apb2rstr);
-		writel(v | RCC_APB2RSTR_SPI4, &STM32_RCC->apb2rstr);
-		v = readl(&STM32_RCC->apb2enr);
-		writel(v & ~RCC_APB2ENR_SPI4, &STM32_RCC->apb2enr);
-	}
-	else if (c->bus == 4) {		/* SPI5 */
-		v = readl(&STM32_RCC->apb2rstr);
-		writel(v | RCC_APB2RSTR_SPI5, &STM32_RCC->apb2rstr);
-		v = readl(&STM32_RCC->apb2enr);
-		writel(v & ~RCC_APB2ENR_SPI5, &STM32_RCC->apb2enr);
-	}
-	else if (c->bus == 5) {		/* SPI6 */
-		v = readl(&STM32_RCC->apb2rstr);
-		writel(v | RCC_APB2RSTR_SPI6, &STM32_RCC->apb2rstr);
-		v = readl(&STM32_RCC->apb2enr);
-		writel(v & ~RCC_APB2ENR_SPI6, &STM32_RCC->apb2enr);
-	}
+	writel(~LPC1788_SPI_CR1_SSE & readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
 
 	d_printk(2, "bus=%d\n", c->bus);
 }
@@ -601,31 +501,35 @@ static void spi_lpc1788_hw_release(struct spi_stm32 *c)
  * @param s		slave data structure
  * @returns		0->success, <0->error code
  */
-static int spi_stm32_prepare_for_slave(
-	struct spi_stm32 *c, struct spi_device *s)
+static int spi_lpc1788_prepare_for_slave(
+	struct spi_lpc1788 *c, struct spi_device *s)
 {
 	unsigned int spd;
 	int ret = 0;
 
+	spi_lpc1788_hw_disable(c);
+
 	/*
  	 * Set for this slave: frame size, clock, mode 
  	 */
-	if (spi_stm32_hw_bt_set(c, s->bits_per_word)) {
+	if (spi_lpc1788_hw_bt_set(c, s->bits_per_word)) {
 		dev_err(&c->slave->dev, "unsupported frame size: %d\n",
 			s->bits_per_word);
 		ret = -EINVAL;
 		goto Done;
 	}
-	if (spi_stm32_hw_clk_set(c, spd = min(s->max_speed_hz, c->speed_hz))) {
+	if (spi_lpc1788_hw_clk_set(c, spd = min(s->max_speed_hz, c->speed_hz))) {
 		dev_err(&c->slave->dev, "slave rate too low: %d\n", spd);
 		ret = -EINVAL;
 		goto Done;
 	}
-	if (spi_stm32_hw_mode_set(c, s->mode)) {
+	if (spi_lpc1788_hw_mode_set(c, s->mode)) {
 		dev_err(&c->slave->dev, "unsupported mode: %x\n", s->mode);
 		ret = -EINVAL;
 		goto Done;
 	}
+	
+	spi_lpc1788_hw_enable(c);
 
 Done:
 	d_printk(2, "slv=%s,ret=%d\n", dev_name(&c->slave->dev), ret);
@@ -637,14 +541,14 @@ Done:
  * @param c		controller data structure
  * @param s		slave data structure
  */
-static void spi_stm32_capture_slave(struct spi_stm32 *c, struct spi_device *s)
+static void spi_lpc1788_capture_slave(struct spi_lpc1788 *c, struct spi_device *s)
 {
-	struct spi_stm32_slv *v = s->controller_data;
+	struct spi_lpc1788_slv *v = s->controller_data;
 
 	/*
  	 * Activate CS for this slave
  	 */
-	if (spi_stm32_hw_cs_set(c, v->cs_gpio, 1)) {
+	if (spi_lpc1788_hw_cs_set(c, v->cs_gpio, 1)) {
 		dev_err(&c->slave->dev, "incorrect chip select: %d\n", 
 			s->chip_select);
 		goto Done;
@@ -659,14 +563,14 @@ Done:
  * @param c		controller data structure
  * @param s		slave data structure
  */
-static void spi_stm32_release_slave(struct spi_stm32 *c, struct spi_device *s)
+static void spi_lpc1788_release_slave(struct spi_lpc1788 *c, struct spi_device *s)
 {
-	struct spi_stm32_slv *v = s->controller_data;
+	struct spi_lpc1788_slv *v = s->controller_data;
 
 	/*
  	 * Release CS for this slave
  	 */
-	if (spi_stm32_hw_cs_set(c, v->cs_gpio, 0)) {
+	if (spi_lpc1788_hw_cs_set(c, v->cs_gpio, 0)) {
 		dev_err(&c->slave->dev, "incorrect chip select: %d\n", 
 			s->chip_select);
 		goto Done;
@@ -681,8 +585,8 @@ Done:
  * @param c		controller data structure
  * @param s		slave data structure
  */
-static void inline spi_stm32_xfer_init(
-	struct spi_stm32 *c, struct spi_device *s)
+static void inline spi_lpc1788_xfer_init(
+	struct spi_lpc1788 *c, struct spi_device *s)
 {
 	struct spi_transfer *t;
 
@@ -699,7 +603,7 @@ static void inline spi_stm32_xfer_init(
 	/*
  	 * Set the size of the transfer in the SPI controller
  	 */
-	spi_stm32_hw_tfsz_set(c, c->len);
+	spi_lpc1788_hw_tfsz_set(c, c->len);
 
 	/*
  	 * Prepare to traverse the message list.
@@ -723,7 +627,7 @@ static void inline spi_stm32_xfer_init(
  * @param c		controller data structure
  * @param x		xfer to advance to
  */
-static void inline spi_stm32_xfer_tx_next(struct spi_stm32 *c)
+static void inline spi_lpc1788_xfer_tx_next(struct spi_lpc1788 *c)
 {
 	unsigned long f;
 
@@ -742,7 +646,7 @@ static void inline spi_stm32_xfer_tx_next(struct spi_stm32 *c)
  	 * Put a frame to the transmit fifo
  	 */
 	spin_lock_irqsave(&c->lock, f);
-	spi_stm32_hw_txfifo_put(c, c->wb, c->tx_t->tx_buf, c->tx_i);
+	spi_lpc1788_hw_txfifo_put(c, c->wb, c->tx_t->tx_buf, c->tx_i);
 	c->tx_i++;
 	c->ti++;
 	spin_unlock_irqrestore(&c->lock, f);
@@ -782,7 +686,7 @@ static void inline spi_lpc1788_xfer_rx_next(struct spi_lpc1788 *c)
 	spin_unlock_irqrestore(&c->lock, f);
 }
 
-#if defined(CONFIG_SPI_STM32_POLLED)
+#if defined(CONFIG_SPI_LPC1788_POLLED)
 
 /*
  * Transfer a message in PIO, polled mode
@@ -791,8 +695,8 @@ static void inline spi_lpc1788_xfer_rx_next(struct spi_lpc1788 *c)
  * @param		pointer to actual transfer length (set here)
  * @returns		0->success, <0->error code
  */
-static int spi_stm32_pio_polled(
-	struct spi_stm32 *c, struct spi_device *s, int *rlen)
+static int spi_lpc1788_pio_polled(
+	struct spi_lpc1788 *c, struct spi_device *s, int *rlen)
 {
 	int i;
 	int ret = 0;
@@ -800,7 +704,7 @@ static int spi_stm32_pio_polled(
 	/*
  	 * Prepare to run a transfer
  	 */
-	spi_stm32_xfer_init(c, s);
+	spi_lpc1788_xfer_init(c, s);
 
 	/*
  	 * Perform the transfer. Transfer is done when all frames
@@ -815,20 +719,20 @@ static int spi_stm32_pio_polled(
 	        for (i = 0; 
 		     i < 1 && c->ti < c->len && !spi_lpc1788_hw_txfifo_full(c);
 		     i++) {
-			spi_stm32_xfer_tx_next(c);
+			spi_lpc1788_xfer_tx_next(c);
 		}
 
 		/*
  		 * Wait for a frame to come in
  		 * but check for error conditions first
  		 */
-		if (spi_stm32_hw_rxfifo_error(c)) {
+		if (spi_lpc1788_hw_rxfifo_error(c)) {
 
 			/*
 			 * If the receive fifo overflown, this transfer
 			 * needs to be finished with an error.
 			 */
-			spi_stm32_hw_rxfifo_purge(c);
+			spi_lpc1788_hw_rxfifo_purge(c);
 			ret = -EIO;
 			goto Done;
 		}
@@ -836,7 +740,7 @@ static int spi_stm32_pio_polled(
 		/*
   	 	 * Receive a frame
  	 	 */
-		while (spi_stm32_hw_rxfifo_empty(c));
+		while (spi_lpc1788_hw_rxfifo_empty(c));
 		spi_lpc1788_xfer_rx_next(c);
 	}
 
@@ -858,9 +762,9 @@ Done:
 static irqreturn_t spi_lpc1788_irq(int irq, void *dev_id)
 {
 	struct spi_lpc1788 *c = dev_id;
-	int sr = readl(&SPI(c)->spi_sr);
+	int mis;
 
-	if (! spi_lpc1788_hw_rxfifo_empty(c)) {
+	while (! spi_lpc1788_hw_rxfifo_empty(c)) {
 
 		/*
 		 * Read in a frame
@@ -875,6 +779,7 @@ static irqreturn_t spi_lpc1788_irq(int irq, void *dev_id)
 			wake_up(&c->wait);
 		}
 	}
+	
 
 	/*
 	 * Push a next frame out
@@ -885,10 +790,20 @@ static irqreturn_t spi_lpc1788_irq(int irq, void *dev_id)
 		 * Write a frame
 		 */
 		while (spi_lpc1788_hw_txfifo_full(c));
-		spi_stm32_xfer_tx_next(c);
+		spi_lpc1788_xfer_tx_next(c);
 	}
 
-	d_printk(4, "ok: sr=%x\n", sr);
+
+	mis = readl(&SPI(c)->spi_mis);
+	if(mis & LPC1788_SPI_MIS_RXMIS){
+		writel(LPC1788_SPI_ICR_RTIC, &SPI(c)->spi_icr);
+	}
+	
+	if(mis & LPC1788_SPI_MIS_RORMIS){
+		writel(LPC1788_SPI_ICR_RORIC, &SPI(c)->spi_icr);
+	}
+
+	d_printk(4, "ok: mis=%x\n", mis);
 	return IRQ_HANDLED;
 }
 
@@ -899,23 +814,23 @@ static irqreturn_t spi_lpc1788_irq(int irq, void *dev_id)
  * @param		pointer to actual transfer length (set here)
  * @returns		0->success, <0->error code
  */
-static int spi_stm32_pio_interrupted(
-	struct spi_stm32 *c, struct spi_device *s, int *rlen)
+static int spi_lpc1788_pio_interrupted(
+	struct spi_lpc1788 *c, struct spi_device *s, int *rlen)
 {
-	struct spi_stm32_slv *v = s->controller_data;
+	struct spi_lpc1788_slv *v = s->controller_data;
 	int ret = 0;
 
 	/*
  	 * Prepare to run a transfer
  	 */
-	spi_stm32_xfer_init(c, s);
+	spi_lpc1788_xfer_init(c, s);
 
 	/*
  	 * Start the transfer
  	 */
 	c->xfer_status = -EBUSY;
 	*rlen = 0;
-	spi_stm32_xfer_tx_next(c);
+	spi_lpc1788_xfer_tx_next(c);
 
 	/*
 	 * Wait for the transfer to complete, one way or another
@@ -949,10 +864,10 @@ static int spi_stm32_pio_interrupted(
  * @param m		message
  * @returns		0 -> success, negative error code -> error
  */
-static int spi_stm32_handle_message(
-	struct spi_stm32 *c, struct spi_message *msg)
+static int spi_lpc1788_handle_message(
+	struct spi_lpc1788 *c, struct spi_message *msg)
 {
-#if defined(SPI_STM32_DEBUG)
+#if defined(SPI_LPC1788_DEBUG)
 	struct spi_transfer *t;
 #endif
 	struct spi_device *s = msg->spi;
@@ -967,7 +882,7 @@ static int spi_stm32_handle_message(
  	 */
 	if (c->slave != s) {
 		c->slave = s;
-		ret = spi_stm32_prepare_for_slave(c, s);
+		ret = spi_lpc1788_prepare_for_slave(c, s);
 		if (ret) {
 			c->slave = NULL;
 			goto Done;
@@ -977,16 +892,16 @@ static int spi_stm32_handle_message(
 	/*
 	 * Activate chip select for the slave
 	 */
-	spi_stm32_capture_slave(c, s);
+	spi_lpc1788_capture_slave(c, s);
 
 	/*
  	 * Transfer the message over the wire
  	 */
 	c->msg = msg;
-#if defined(CONFIG_SPI_STM32_POLLED)
-	ret = spi_stm32_pio_polled(c, s, &rlen);
+#if defined(CONFIG_SPI_LPC1788_POLLED)
+	ret = spi_lpc1788_pio_polled(c, s, &rlen);
 #else
-	ret = spi_stm32_pio_interrupted(c, s, &rlen);
+	ret = spi_lpc1788_pio_interrupted(c, s, &rlen);
 #endif
 	if (ret) {
 		goto Done;
@@ -998,9 +913,9 @@ Done:
 	/*
 	 * Release chip select for the slave
 	 */
-	spi_stm32_release_slave(c, s);
+	spi_lpc1788_release_slave(c, s);
 
-#if defined(SPI_STM32_DEBUG)
+#if defined(SPI_LPC1788_DEBUG)
 	list_for_each_entry(t, &msg->transfers, transfer_list) {
 		int i; 
 		char * p;
@@ -1025,7 +940,7 @@ Done:
 static void spi_lpc1788_handle(struct work_struct *w)
 {
 	struct spi_message *msg;
-	struct spi_stm32 *c = container_of(w, struct spi_stm32, work);
+	struct spi_lpc1788 *c = container_of(w, struct spi_lpc1788, work);
 	unsigned long f = 0;
 
 	/*
@@ -1049,7 +964,7 @@ static void spi_lpc1788_handle(struct work_struct *w)
 		/*
 		 * Transfer the message over SPI wires
 		 */
-		msg->status = spi_stm32_handle_message(c, msg);
+		msg->status = spi_lpc1788_handle_message(c, msg);
 
 		/*
  		 * Let the upper layers complete processing of the message
@@ -1075,7 +990,7 @@ static void spi_lpc1788_handle(struct work_struct *w)
  */
 static int spi_lpc1788_setup(struct spi_device *s)
 {
-	struct spi_stm32 *c = spi_master_get_devdata(s->master);
+	struct spi_lpc1788 *c = spi_master_get_devdata(s->master);
 	int ret = 0;
 
 	/*
@@ -1089,7 +1004,7 @@ static int spi_lpc1788_setup(struct spi_device *s)
 	/*
  	 * Check the width of transfer for this device
  	 */
-	if (spi_stm32_hw_bt_check(c, s->bits_per_word)) {
+	if (spi_lpc1788_hw_bt_check(c, s->bits_per_word)) {
 		dev_err(&s->dev, "unsupported bits per word %d\n", 
 			s->bits_per_word);
 		ret = -EINVAL;
@@ -1099,7 +1014,7 @@ static int spi_lpc1788_setup(struct spi_device *s)
 	/*
 	 * Make sure Chip Select is inactive for this slave
 	 */
-	spi_stm32_release_slave(c, s);
+	spi_lpc1788_release_slave(c, s);
 
 Done:
 	d_printk(1, "slv=%s,spd=%d,cs=%d,bt=%d,md=0x%x,ret=%d\n",
@@ -1125,7 +1040,7 @@ static void spi_lpc1788_cleanup(struct spi_device *s)
  */
 static int spi_lpc1788_transfer(struct spi_device *s, struct spi_message *msg)
 {
-	struct spi_stm32 *c = spi_master_get_devdata(s->master);
+	struct spi_lpc1788 *c = spi_master_get_devdata(s->master);
 	unsigned long f;
 	int ret = 0;
 
@@ -1367,7 +1282,7 @@ Error_release_hardware:
 Error_release_workqueue: 
 	destroy_workqueue(c->workqueue);
 Error_release_irq: 
-#if !defined(CONFIG_SPI_STM32_POLLED)
+#if !defined(CONFIG_SPI_LPC1788_POLLED)
 	free_irq(c->irq, c);
 Error_release_regs: 
 #endif
@@ -1399,10 +1314,10 @@ Done:
  * @dev			SPI controller platform device
  * @returns		0->success, <0->error code
  */
-static int __devexit spi_stm32_remove(struct platform_device *dev)
+static int __devexit spi_lpc1788_remove(struct platform_device *dev)
 {
 	struct spi_master *m  = platform_get_drvdata(dev);
-	struct spi_stm32 *c = spi_master_get_devdata(m);
+	struct spi_lpc1788 *c = spi_master_get_devdata(m);
 	struct spi_message *msg;
 	unsigned long f;
 	int ret = 0;
@@ -1422,7 +1337,7 @@ static int __devexit spi_stm32_remove(struct platform_device *dev)
 	 * Release kernel resources.
 	 */
 	spi_unregister_master(m);
-#if !defined(CONFIG_SPI_STM32_POLLED)
+#if !defined(CONFIG_SPI_LPC1788_POLLED)
 	free_irq(c->irq, c);
 #endif
 	destroy_workqueue(c->workqueue);
@@ -1445,11 +1360,11 @@ static int __devexit spi_stm32_remove(struct platform_device *dev)
 /*
  * Platform driver data structure
  */
-static struct platform_driver spi_stm32_drv = {
+static struct platform_driver spi_lpc1788_drv = {
 	.probe	= spi_lpc1788_probe,
-	.remove	= __devexit_p(spi_stm32_remove),
+	.remove	= __devexit_p(spi_lpc1788_remove),
 	.driver = {
-		.name = "spi_stm32",
+		.name = "spi_lpc1788",
 		.owner = THIS_MODULE,
 	},
 };
@@ -1457,28 +1372,28 @@ static struct platform_driver spi_stm32_drv = {
 /*
  * Driver init
  */
-static int __init spi_stm32_module_init(void)
+static int __init spi_lpc1788_module_init(void)
 {
 	int ret;
 	
-	ret = platform_driver_register(&spi_stm32_drv);
+	ret = platform_driver_register(&spi_lpc1788_drv);
 
-	d_printk(1, "drv=%s,ret=%d\n", spi_stm32_drv.driver.name, ret);
+	d_printk(1, "drv=%s,ret=%d\n", spi_lpc1788_drv.driver.name, ret);
 	return ret;
 }
 
 /*
  * Driver clean-up
  */
-static void __exit spi_stm32_module_exit(void)
+static void __exit spi_lpc1788_module_exit(void)
 {
-	platform_driver_unregister(&spi_stm32_drv);
+	platform_driver_unregister(&spi_lpc1788_drv);
 
-	d_printk(1, "drv=%s\n", spi_stm32_drv.driver.name);
+	d_printk(1, "drv=%s\n", spi_lpc1788_drv.driver.name);
 }
 
-module_init(spi_stm32_module_init);
-module_exit(spi_stm32_module_exit);
+module_init(spi_lpc1788_module_init);
+module_exit(spi_lpc1788_module_exit);
 MODULE_AUTHOR("Vladimir Khusainov, <vlad@emcraft.com>");
-MODULE_DESCRIPTION("Device driver for the STM32 SPI controller");
+MODULE_DESCRIPTION("Device driver for the LPC1788 SPI controller");
 MODULE_LICENSE("GPL");
