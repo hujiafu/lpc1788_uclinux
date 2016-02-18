@@ -263,6 +263,21 @@ config SPI_STM32
 	help
 	  This is the SPI controller master driver for STM32F2/F4
 
+config SPI_LPC1788
+	tristate "LPC1788 SPI Controller"
+	depends on ARCH_LPC178X
+	select GPIOLIB
+	help
+	  This is the SPI controller master driver for LPC1788
+
+config SPI_LPC1788_POLLED
+	tristate "LPC1788 SPI Controller Polled mode"
+	depends on ARCH_LPC178X && SPI_LPC1788
+	default n
+	select GPIOLIB
+	help
+	  This is the SPI controller master for LPC1788 polled mode
+
 config SPI_SH_MSIOF
 	tristate "SuperH MSIOF SPI controller"
 	depends on SUPERH && HAVE_CLK

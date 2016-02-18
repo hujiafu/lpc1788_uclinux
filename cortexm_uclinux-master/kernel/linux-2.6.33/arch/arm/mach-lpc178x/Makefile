@@ -11,6 +11,7 @@ obj-$(CONFIG_USB_OHCI_HCD)	+= ohci.o
 obj-$(CONFIG_MMC_ARMMMCI)	+= sdcard.o
 obj-$(CONFIG_I2C_LPC2K)		+= i2c.o
 obj-$(CONFIG_I2C_GPIO)		+= i2c-gpio.o
+obj-$(CONFIG_SPI_LPC1788)	+= spi.o
 obj-$(CONFIG_FB_ARMCLCD)	+= lpc1788_lcd.o
 obj-$(CONFIG_LEDS_PCA9532)	+= ea-lpc1788-pca9532.o
 obj-$(CONFIG_GPIOLIB)		+= gpio.o

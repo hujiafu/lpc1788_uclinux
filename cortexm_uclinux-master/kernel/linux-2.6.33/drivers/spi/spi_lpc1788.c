@@ -27,7 +27,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_lpc1788.h>
 #include <mach/platform.h>
-#include <mach/lpc1788.h>
+#include <mach/spi.h>
 #include <mach/iomux.h>
 
 /*
@@ -153,7 +153,7 @@ struct reg_spi {
 #define LPC1788_SPI_MIS_RORMIS		(1<<0)
 #define LPC1788_SPI_IMSC_RXIM		(1<<2)
 #define LPC1788_SPI_IMSC_RORIM		(1<<0)
-#define LCP1788_SPI_CR1_MSTR		(1<<2)
+#define LPC1788_SPI_CR1_MSTR		(1<<2)
 #define LPC1788_SPI_CR1_SSE			(1<<1)
 #define LPC1788_SPI_CR0_CPOL		(1<<6)
 #define LPC1788_SPI_CR0_CPHA		(1<<7)
@@ -179,7 +179,7 @@ static int spi_lpc1788_hw_init(struct spi_lpc1788 *c)
 	/*
  	 * Set the master mode
  	 */
-	writel(LPC1788_SPI_CR1_MSTR, &SPI(c)->spi_cr1);
+	writel(~LPC1788_SPI_CR1_MSTR & readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
 
 	/*
 	 * Software chip select management, NSS pin can be re-used as a GPIO.
@@ -274,7 +274,7 @@ static inline int spi_lpc1788_hw_clk_set(struct spi_lpc1788 *c, unsigned int spd
  	 * Can't provide a rate that is slow enough for the slave
  	 */
 	if (i == 254) {
-		ret = -EIO;
+		ret = 1;
 		goto Done;
 	}
 
@@ -302,7 +302,7 @@ static inline int spi_lpc1788_hw_bt_check(struct spi_lpc1788 *c, int bt)
 	/*
 	 *  4 to 16 bit supported
 	 */
-	int ret = 0
+	int ret = 0;
 		
 	if(bt < 4 || bt > 16)
 	  ret = 1;
@@ -327,7 +327,7 @@ static inline int spi_lpc1788_hw_bt_set(struct spi_lpc1788 *c, int bt)
 	v &= ~LPC1788_SPI_CLR_DSS;
 
 	if(bt < 4 || bt > 16){
-		ret = -EIO;
+		ret = 1;
 	}else{
 		v |= ((bt-1) << 0);
 		writel(v, &SPI(c)->spi_cr0);
@@ -352,7 +352,7 @@ static inline void spi_lpc1788_hw_tfsz_set(struct spi_lpc1788 *c, int len)
 
 static inline void spi_lpc1788_hw_enable(struct spi_lpc1788 *c)
 {
-	writel(LPC1788_SPI_CR1_SSE & readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
+	writel(LPC1788_SPI_CR1_SSE | readl(&SPI(c)->spi_cr1), &SPI(c)->spi_cr1);
 }
 
 static inline void spi_lpc1788_hw_disable(struct spi_lpc1788 *c)
@@ -433,7 +433,7 @@ static inline void spi_lpc1788_hw_txfifo_put(
  */
 static inline int spi_lpc1788_hw_rxfifo_empty(struct spi_lpc1788 *c)
 {
-	return !(readl(&SPI(c)->sr) & LPC1788_SPI_SR_RXNE);
+	return !(readl(&SPI(c)->spi_sr) & LPC1788_SPI_SR_RXNE);
 }
 
 /*
@@ -1210,7 +1210,7 @@ static int __devinit spi_lpc1788_probe(struct platform_device *pdev)
  	 * Initialize the controller hardware
  	 */
 	if (spi_lpc1788_hw_init(c)) {
-		dev_err(&dev->dev, "unable to initialize hardware for "
+		dev_err(&pdev->dev, "unable to initialize hardware for "
 			"SPI controller %d\n", bus);
 		ret = -ENXIO;
 		goto Error_release_workqueue;
@@ -1364,7 +1364,7 @@ static struct platform_driver spi_lpc1788_drv = {
 	.probe	= spi_lpc1788_probe,
 	.remove	= __devexit_p(spi_lpc1788_remove),
 	.driver = {
-		.name = "spi_lpc1788",
+		.name = "lpc2k-spi",
 		.owner = THIS_MODULE,
 	},
 };

@@ -30,7 +30,7 @@
 
 struct lpc1788_spi_mach_info {
 	unsigned int	spiclk;	
-}
+};
 
 void __init lpc178x_spi_init(void);
 

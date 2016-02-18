@@ -23,10 +23,14 @@
  */
 #include <linux/init.h>
 #include <linux/platform_device.h>
-#include <linux/spi.h>
+#include <linux/sysdev.h>
+#include <linux/io.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
 
 #include <mach/spi.h>
 #include <mach/power.h>
+#include <mach/clock.h>
 #include <mach/platform.h>
 
 /*
@@ -66,7 +70,7 @@ static struct resource lpc178x_spi## uid ##_resources[] = {		\
 struct platform_device lpc178x_spi## uid ##_device = {			\
 	.name           = "lpc2k-spi",					\
 	.id             = uid,						\
-	.dev.platform_data	= spi## uid ##_data,	
+	.dev.platform_data	= spi## uid ##_data,	\	
 	.num_resources  = ARRAY_SIZE(lpc178x_spi## uid ##_resources),	\
 	.resource       = lpc178x_spi## uid ##_resources,		\
 };

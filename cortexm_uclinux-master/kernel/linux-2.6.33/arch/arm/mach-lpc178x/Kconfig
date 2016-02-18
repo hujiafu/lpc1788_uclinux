@@ -10,6 +10,21 @@ config MACH_LPC178X
 menu "LPC178x/7x I/O interfaces"
 	depends on ARCH_LPC178X
 
+config LPC178X_SPI0
+	depends on ARCH_LPC178X && SPI_LPC1788
+	bool "Enable LPC178x/7x SPI0 port"
+	default y
+
+config LPC178X_SPI1
+	depends on ARCH_LPC178X && SPI_LPC1788
+	bool "Enable LPC178x/7x SPI1 port"
+	default n
+
+config LPC178X_SPI2
+	depends on ARCH_LPC178X && SPI_LPC1788
+	bool "Enable LPC178x/7x SPI2 port"
+	default n
+
 config LPC178X_UART0
 	depends on ARCH_LPC178X && SERIAL_8250
 	bool "Enable LPC178x/7x UART0 port"

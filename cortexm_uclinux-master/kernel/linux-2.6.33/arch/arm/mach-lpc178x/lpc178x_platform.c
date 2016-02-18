@@ -43,6 +43,7 @@
 #include <mach/dma.h>
 #include <mach/sdcard.h>
 #include <mach/i2c.h>
+#include <mach/spi.h>
 #include <mach/fb.h>
 #include <mach/rtc.h>
 #include <mach/wdt.h>
@@ -234,6 +235,13 @@ static void __init lpc178x_init(void)
 	 */
 	lpc178x_i2c_init();
 #endif /* defined(CONFIG_I2C_LPC2K) || defined(CONFIG_I2C_LPC2K_MODULE) */
+
+#if defined(CONFIG_SPI_LPC2K)
+	/*
+	 * Configure the available SPI interfaces
+	 */
+	lpc178x_spi_init();
+#endif /* defined(CONFIG_SPI_LPC2K) */
 
 #if defined(CONFIG_GPIOLIB)
 	/*
