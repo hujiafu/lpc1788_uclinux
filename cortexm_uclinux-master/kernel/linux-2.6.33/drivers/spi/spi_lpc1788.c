@@ -892,7 +892,8 @@ static int spi_lpc1788_handle_message(
 	/*
 	 * Activate chip select for the slave
 	 */
-	spi_lpc1788_capture_slave(c, s);
+	/* the ssp hardware will control ssel*/
+	//spi_lpc1788_capture_slave(c, s);
 
 	/*
  	 * Transfer the message over the wire
@@ -913,7 +914,8 @@ Done:
 	/*
 	 * Release chip select for the slave
 	 */
-	spi_lpc1788_release_slave(c, s);
+	/* the ssp hardware will control ssel*/
+	//spi_lpc1788_release_slave(c, s);
 
 #if defined(SPI_LPC1788_DEBUG)
 	list_for_each_entry(t, &msg->transfers, transfer_list) {
@@ -1014,7 +1016,8 @@ static int spi_lpc1788_setup(struct spi_device *s)
 	/*
 	 * Make sure Chip Select is inactive for this slave
 	 */
-	spi_lpc1788_release_slave(c, s);
+	/* the ssp hardware will control ssel*/
+	//spi_lpc1788_release_slave(c, s);
 
 Done:
 	d_printk(1, "slv=%s,spd=%d,cs=%d,bt=%d,md=0x%x,ret=%d\n",

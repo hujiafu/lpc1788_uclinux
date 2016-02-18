@@ -422,6 +422,17 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 	{{0, 28}, LPC178X_GPIO_CONFIG_I(1, 0, 1, 1)},
 #endif /* defined(CONFIG_I2C_LPC2K) || defined(CONFIG_I2C_LPC2K_MODULE) */
 
+#if defined(CONFIG_SPI_LPC1788) && defined(CONFIG_LPC178X_SPI0)
+	/* P2.22 (D) = SSP0_SCK */
+	{{2, 22}, LPC178X_GPIO_CONFIG_D(2, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P2.23 (D) = SSP0_SSEL */
+	{{2, 23}, LPC178X_GPIO_CONFIG_D(2, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P2.26 (D) = SSP0_MISO */
+	{{2, 26}, LPC178X_GPIO_CONFIG_D(2, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P2.27 (D) = SSP0_MOSI */
+	{{2, 27}, LPC178X_GPIO_CONFIG_D(2, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+#endif	
+
 #if defined(CONFIG_I2C_GPIO) || defined(CONFIG_I2C_GPIO_MODULE)
 	/*
 	 * Pin configuration to work with the I2C0 bus in the GPIO mode
