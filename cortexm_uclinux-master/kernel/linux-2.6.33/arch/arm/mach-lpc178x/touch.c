@@ -2,6 +2,7 @@
 #include <linux/platform_device.h>
 #include <linux/sysdev.h>
 #include <linux/io.h>
+#include <linux/spi.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <mach/lpc178x.h>
@@ -18,23 +19,23 @@
 #define LPC178X_EINT2_IRQ	20
 #define LPC178X_EINT3_IRQ	21
 
+
+
 #define TOUCH_PLAT_DEVICE(uid)						\
-static struct resource lpc178x_touch_resources[] = {		\
-        {								\
-                .start	= LPC178X_SYSCON_BASE,			\
-                .end	= LPC178X_SYSCON_BASE + SZ_4K - 1,	\
-                .flags	= IORESOURCE_MEM,				\
-        },								\
-	{								\
-                .start	= LPC178X_EINT## uid ##_IRQ,			\
-                .flags	= IORESOURCE_IRQ,				\
-        },								\
+static struct touch_platdata tsc2046_config = {		\
+	.mem_start = LPC178X_SYSCON_BASE,				\
+	.mem_size = SZ_4K,								\
+	.irq = LPC178X_EINT## uid ##_IRQ,				\
 };									\
-struct platform_device lpc178x_touch_device = {			\
-	.name           = "ads7846",					\
-	.id             = uid,						\
-	.num_resources  = ARRAY_SIZE(lpc178x_touch_resources),	\
-	.resource       = lpc178x_touch_resources,		\
+static struct spi_board_info __initdata lpc178x_spi_devs[] = {			\
+	{												\
+		.modalias           = "ads7846",					\
+		.bus_num             = 0,\
+		.chip_select	= 0, \
+		.mode		= SPI_MODE_3,	\
+		.max_speed_hz	= 100000,	\
+		.platform_data  = &tsc2046_config,	\
+	},												\
 }
 
 #if defined(CONFIG_LPC178X_TOUCH_1)
@@ -51,7 +52,7 @@ TOUCH_PLAT_DEVICE(3);
 
 void __init lpc178x_touch_init(void)
 {
-	platform_device_register(&lpc178x_touch_device);	
+	spi_register_board_info(lpc178x_spi_devs, ARRAY_SIZE(lpc178x_spi_devs));
 }
 
 

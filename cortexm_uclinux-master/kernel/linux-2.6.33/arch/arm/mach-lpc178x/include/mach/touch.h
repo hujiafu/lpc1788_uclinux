@@ -27,6 +27,13 @@
 
 #include <mach/lpc178x.h>
 
+struct touch_platdata {
+
+	unsigned int mem_base;
+	unsigned int mem_size;
+	unsigned int irq;
+};
+
 
 void __init lpc178x_touch_init(void);
 
