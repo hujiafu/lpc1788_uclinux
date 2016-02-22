@@ -228,7 +228,7 @@ static int tsc2046_read12_ser(struct device *dev, unsigned command)
 	spi_message_init(&req->msg);
 
 	/* FIXME boards with tsc2046 might use external vref instead ... */
-	use_internal = (ts->model == 7846);
+	use_internal = (ts->model == 2046);
 
 	/* maybe turn on internal vREF, and let it settle */
 	if (use_internal) {
@@ -333,7 +333,7 @@ static inline unsigned vbatt_adjust(struct tsc2046 *ts, ssize_t v)
 	unsigned retval = vaux_adjust(ts, v);
 
 	/* tsc2046 has a resistor ladder to scale this signal down */
-	if (ts->model == 7846)
+	if (ts->model == 2046)
 		retval *= 4;
 	return retval;
 }
@@ -380,7 +380,7 @@ static int ads784x_hwmon_register(struct spi_device *spi, struct tsc2046 *ts)
 
 	/* hwmon sensors need a reference voltage */
 	switch (ts->model) {
-	case 7846:
+	case 2046:
 		if (!ts->vref_mv) {
 			dev_dbg(&spi->dev, "assuming 2.5V internal vREF\n");
 			ts->vref_mv = 2500;
@@ -399,7 +399,7 @@ static int ads784x_hwmon_register(struct spi_device *spi, struct tsc2046 *ts)
 
 	/* different chips have different sensor groups */
 	switch (ts->model) {
-	case 7846:
+	case 2046:
 		ts->attr_group = &tsc2046_attr_group;
 		break;
 	case 7845:
@@ -923,7 +923,7 @@ static int __devinit tsc2046_probe(struct spi_device *spi)
 
 	spin_lock_init(&ts->lock);
 
-	ts->model = pdata->model ? : 7846;
+	ts->model = pdata->model ? : 2046;
 	ts->vref_delay_usecs = pdata->vref_delay_usecs ? : 100;
 	ts->x_plate_ohms = pdata->x_plate_ohms ? : 400;
 	ts->pressure_max = pdata->pressure_max ? : ~0;
@@ -1053,7 +1053,7 @@ static int __devinit tsc2046_probe(struct spi_device *spi)
 	m->context = ts;
 
 	/* turn y+ off, x- on; we'll use formula #2 */
-	if (ts->model == 7846) {
+	if (ts->model == 2046) {
 		m++;
 		spi_message_init(m);
 

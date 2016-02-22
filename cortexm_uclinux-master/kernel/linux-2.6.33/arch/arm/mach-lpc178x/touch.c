@@ -5,6 +5,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/spi/spi.h>
+#include <linux/spi/tsc2046.h>
 #include <mach/lpc178x.h>
 #include <mach/clock.h>
 #include <mach/touch.h>
@@ -35,11 +36,21 @@
 
 
 #define TOUCH_PLAT_DEVICE(uid)						\
-static struct touch_platdata tsc2046_config = {		\
+static struct tsc2046_platform_data tsc2046_pldata = {		\
+	.swap_xy = 0,		\
+	.vref_mv = 2500,	\
+	.model = 2046,		\
+	.vref_delay_usecs = 100,	\
+	.x_plate_ohms = 400,		\
+	.pressure_max = 15000,		\
+	.debounce_max = 2,		\
+	.debounce_rep = 1,		\
+	.debounce_tol = ~(0),		\
+	.penirq_recheck_delay_usecs = 100,	\
+	.settle_delay_usecs = 150,	\
+	.keep_vref_on = 1,		\	
 	.io_setup = lpc178x_touch_iosetup,				\
 	.eint_clear = lpc178x_eint_clear,				\
-	.mem_start = LPC178X_SYSCON_BASE,				\
-	.mem_size = SZ_4K,								\
 	.irq = LPC178X_EINT## uid ##_IRQ,				\
 };									\
 static struct spi_board_info __initdata lpc178x_spi_devs[] = {			\
