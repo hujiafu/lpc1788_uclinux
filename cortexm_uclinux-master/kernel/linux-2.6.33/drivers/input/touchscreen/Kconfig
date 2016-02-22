@@ -11,6 +11,14 @@ menuconfig INPUT_TOUCHSCREEN
 
 if INPUT_TOUCHSCREEN
 
+config TOUCHSCREEN_TSC2046
+	tristate "TSC2046 based touchscreens"
+	depends on SPI_MASTER
+	depends on HWMON = n || HWMON
+	help
+	  Say Y here if you have a touchscreen interface using the
+	  TSC2046		
+
 config TOUCHSCREEN_ADS7846
 	tristate "ADS7846/TSC2046 and ADS7843 based touchscreens"
 	depends on SPI_MASTER

@@ -27,14 +27,26 @@
 
 #include <mach/lpc178x.h>
 
-struct touch_platdata {
+struct lpc178x_eint_regs {
+	unsigned int extint;
+	unsigned int rsv0;
+	unsigned int extmode;
+	unsigned int extpolar;
+};
 
-	unsigned int mem_base;
+
+struct touch_platdata {
+	int (*io_setup)(void);
+	int (*eint_clear)(void);
+	unsigned int mem_start;
 	unsigned int mem_size;
 	unsigned int irq;
 };
 
 
 void __init lpc178x_touch_init(void);
+
+static int lpc178x_touch_iosetup(void);
+static int lpc178x_eint_clear(void);
 
 #endif /* _MACH_LPC178X_TOUCH_H_ */
