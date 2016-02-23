@@ -51,6 +51,7 @@
 #if defined(CONFIG_GPIOLIB)
 #include <mach/i2c-gpio.h>
 #include <mach/gpio.h>
+#include <mach/touch.h>
 #include <mach/ea-lpc1788-pca9532.h>
 #endif /* CONFIG_GPIOLIB */
 
@@ -290,4 +291,9 @@ static void __init lpc178x_init(void)
 	lpc178x_wdt_init();
 #endif /* CONFIG_LPC178X_WATCHDOG */
 
+#if defined(CONFIG_TOUCHSCREEN_TSC2046)
+	lpc178x_touch_init();
+#endif
+
 }
+

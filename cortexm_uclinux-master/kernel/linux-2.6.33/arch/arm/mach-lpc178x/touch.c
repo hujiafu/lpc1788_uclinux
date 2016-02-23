@@ -10,6 +10,7 @@
 #include <mach/clock.h>
 #include <mach/touch.h>
 #include <mach/power.h>
+#include <mach/gpio.h>
 
 
 
@@ -48,10 +49,10 @@ static struct tsc2046_platform_data tsc2046_pldata = {		\
 	.debounce_tol = ~(0),		\
 	.penirq_recheck_delay_usecs = 100,	\
 	.settle_delay_usecs = 150,	\
-	.keep_vref_on = 1,		\	
+	.keep_vref_on = 1,		\
+	.gpio_pendown = LPC178X_GPIO_MKPIN(2,11),	\
 	.io_setup = lpc178x_touch_iosetup,				\
 	.eint_clear = lpc178x_eint_clear,				\
-	.irq = LPC178X_EINT## uid ##_IRQ,				\
 };									\
 static struct spi_board_info __initdata lpc178x_spi_devs[] = {			\
 	{												\
@@ -61,7 +62,7 @@ static struct spi_board_info __initdata lpc178x_spi_devs[] = {			\
 		.irq = LPC178X_EINT## uid ##_IRQ,	\
 		.mode		= SPI_MODE_3,	\
 		.max_speed_hz	= 100000,	\
-		.platform_data  = &tsc2046_config,	\
+		.platform_data  = &tsc2046_pldata,	\
 	},												\
 }
 

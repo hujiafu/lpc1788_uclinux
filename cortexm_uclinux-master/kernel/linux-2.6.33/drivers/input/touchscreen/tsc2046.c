@@ -132,6 +132,7 @@ struct tsc2046 {
 	int			gpio_pendown;
 
 	void			(*wait_for_sync)(void);
+	void		(*penirq_clear)(void);
 };
 
 /* leave chip selected when we're done, for quicker re-select? */
@@ -744,6 +745,8 @@ static irqreturn_t tsc2046_irq(int irq, void *handle)
 	struct tsc2046 *ts = handle;
 	unsigned long flags;
 
+	ts->penirq_clear();
+
 	spin_lock_irqsave(&ts->lock, flags);
 	if (likely(get_pendown_state(ts))) {
 		if (!ts->irq_disabled) {
@@ -859,6 +862,8 @@ static int __devinit setup_pendown(struct spi_device *spi, struct tsc2046 *ts)
 				pdata->gpio_pendown);
 		return err;
 	}
+	
+	gpio_direction_input(pdata->gpio_pendown);
 
 	ts->gpio_pendown = pdata->gpio_pendown;
 	return 0;
@@ -883,6 +888,10 @@ static int __devinit tsc2046_probe(struct spi_device *spi)
 	if (!pdata) {
 		dev_dbg(&spi->dev, "no platform data?\n");
 		return -ENODEV;
+	}
+
+	if(pdata->io_setup != NULL){
+		pdata->io_setup();
 	}
 
 	/* don't exceed max specified sample rate */
@@ -946,6 +955,8 @@ static int __devinit tsc2046_probe(struct spi_device *spi)
 		ts->filter_data = ts;
 	} else
 		ts->filter = tsc2046_no_filter;
+
+	ts->penirq_clear = pdata->eint_clear;
 
 	err = setup_pendown(spi, ts);
 	if (err)

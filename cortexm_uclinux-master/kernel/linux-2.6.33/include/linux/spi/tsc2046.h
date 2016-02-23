@@ -6,9 +6,9 @@
  * It's OK if the min/max values are zero.
  */
 enum tsc2046_filter {
-	ADS7846_FILTER_OK,
-	ADS7846_FILTER_REPEAT,
-	ADS7846_FILTER_IGNORE,
+	TSC2046_FILTER_OK,
+	TSC2046_FILTER_REPEAT,
+	TSC2046_FILTER_IGNORE,
 };
 
 struct tsc2046_platform_data {
