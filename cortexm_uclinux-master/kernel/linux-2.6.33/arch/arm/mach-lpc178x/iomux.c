@@ -433,6 +433,11 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 	{{2, 27}, LPC178X_GPIO_CONFIG_D(2, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 #endif	
 
+#if defined(CONFIG_SPI_LPC1788) && defined(CONFIG_TOUCHSCREEN_TSC2046)
+	/* P2.11 (D) = EINT1 */
+	{{2, 11}, LPC178X_GPIO_CONFIG_D(1, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+#endif
+
 #if defined(CONFIG_I2C_GPIO) || defined(CONFIG_I2C_GPIO_MODULE)
 	/*
 	 * Pin configuration to work with the I2C0 bus in the GPIO mode
