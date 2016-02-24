@@ -67,16 +67,33 @@ struct platform_device lpc178x_i2c## uid ##_device = {			\
 /*
  * Declare 3 platform devices
  */
+#if defined(CONFIG_LPC178X_I2C0)
 I2C_PLAT_DEVICE(0);
+#endif
+
+#if defined(CONFIG_LPC178X_I2C1)
 I2C_PLAT_DEVICE(1);
+#endif
+
+#if defined(CONFIG_LPC178X_I2C2)
 I2C_PLAT_DEVICE(2);
+#endif
 
 void __init lpc178x_i2c_init(void)
 {
 	/*
 	 * Register platform devices
 	 */
+#if defined(CONFIG_LPC178X_I2C0)
 	platform_device_register(&lpc178x_i2c0_device);
+#endif
+
+#if defined(CONFIG_LPC178X_I2C1)
 	platform_device_register(&lpc178x_i2c1_device);
+#endif
+
+#if defined(CONFIG_LPC178X_I2C2)
 	platform_device_register(&lpc178x_i2c2_device);
+#endif
 }
+

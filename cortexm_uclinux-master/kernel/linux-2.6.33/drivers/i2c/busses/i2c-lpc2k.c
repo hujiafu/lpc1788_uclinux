@@ -426,7 +426,7 @@ static irqreturn_t i2c_lpc2k_handler(int this_irq, void *dev_id)
 static u32 i2c_lpc2k_functionality(struct i2c_adapter *adap)
 {
 	/* Only emulated SMBus for now */
-	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
+	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_I2C_BLOCK;
 }
 
 static const struct i2c_algorithm i2c_lpc2k_algorithm = {

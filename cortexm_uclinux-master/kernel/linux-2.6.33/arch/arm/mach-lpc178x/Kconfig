@@ -25,6 +25,21 @@ config LPC178X_TOUCH3
 	bool "Enable LPC178x/7x SPI0 port"
 	default n
 
+config LPC178X_I2C0
+	depends on ARCH_LPC178X && I2C_LPC2K
+	bool "Enable LPC178x/7x I2C0 port"
+	default n
+
+config LPC178X_I2C1
+	depends on ARCH_LPC178X && I2C_LPC2K
+	bool "Enable LPC178x/7x I2C1 port"
+	default n
+
+config LPC178X_I2C2
+	depends on ARCH_LPC178X && I2C_LPC2K
+	bool "Enable LPC178x/7x I2C2 port"
+	default n
+
 config LPC178X_SPI0
 	depends on ARCH_LPC178X && SPI_LPC1788
 	bool "Enable LPC178x/7x SPI0 port"
