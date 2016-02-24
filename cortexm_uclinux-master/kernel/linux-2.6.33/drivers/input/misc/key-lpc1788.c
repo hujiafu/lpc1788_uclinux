@@ -1,5 +1,8 @@
 
 
+#define BTN_DEBOUNCE_DELAY   (20 * 1000000)   /* ns delay before the first sample */
+
+
 #define LPC178X_INT_STATUS	0x0	
 #define LPC178X_INT_STATR0	0x4	
 #define LPC178X_INT_STATF0	0x8	
@@ -20,11 +23,41 @@
 
 #define BTN_0	LPC178X_P0 + 1
 #define BTN_1	LPC178X_P2 + 4
+#define BTN_0_PIN	LPC178X_GPIO_MKPIN(0,1)
+#define BTN_1_PIN	LPC178X_GPIO_MKPIN(2,4)
+
 
 #define BTN_0_MSK LPC178X_GPIO_FALLING 
 #define BTN_1_MSK LPC178X_GPIO_FALLING 
 
+#define KEY_DOWN_P0	0x1
+#define KEY_DOWN_P2	0x2
+#define KEY_UP_P0	0x10
+#define KEY_UP_P2	0x20
+
 #define BTN_NUM	2
+
+static DECLARE_WAIT_QUEUE_HEAD(button_waitq);
+static volatile int ev_press = 0;
+
+struct btn_lpc1788 {
+	unsigned int pin;
+	unsigned int pin_flag;
+	unsigned int pin_num;
+};
+
+static struct btn_lpc1788 btn_data = {
+	{
+		.pin = BTN_0,
+		.pin_flag = BTN_0_MSK,
+		.pin_num = BTN_0_PIN,
+	},
+	{
+		.pin = BTN_1,
+		.pin_flag = BTN_1_MSK,
+		.pin_num = BTN_1_PIN,
+	},
+};
 /*
  * Driver verbosity level: 0->silent; >0->verbose (1 to 4, growing verbosity)
  */
@@ -47,6 +80,10 @@ struct lpc178x_gpio {
 
 	void __iomem		*reg_base;
 	int			irq;
+	int			status0;
+	int			status2;
+	spinlock_t              lock;
+	struct hrtimer          timer;
 };
 
 
@@ -63,6 +100,11 @@ static int lpc178x_btn_close(sttic inode *inode, struct file *file)
 
 static int lpc178x_btn_read(sttic file *file, char __user *buff, size_t count, loff_t *offset)
 {
+
+	if(file->f_flags & O_NONBLOCK)
+		return -EAGAIN;
+	else
+		wait_event_interruptible(button_waitq, ev_press);
 	return 0;
 }
 
@@ -95,48 +137,90 @@ static inline void btn_writel(unsigned long val, void __iomem *reg)
 	__raw_writel(val, reg);
 }
 
+static enum hrtimer_restart btn_timer(struct hrtimer *handle)
+{
+	struct lpc178x_gpio  *gpio = container_of(handle, struct lpc178x_gpio, timer);
+	
+	spin_lock(&gpio->lock);
+	
+	for(i=0; i<BTN_NUM; i++){
+		if((btn_data[i].pin) < (LPC178X_P0 + 32)){
+			data = gpio_get_value(btn_data[i].pin_num);
+			if((data<<i) & gpio->status0){
+				//report key down
+				wake_up(&button_waitq);
+			}else{
+				gpio->status0 &= ~(1<<i);
+			}
+		}
+		if((btn_data[i].pin) >= (LPC178X_P2)){
+			data = gpio_get_value(btn_data[i].pin_num);
+			if((data<<i) & gpio->status2){
+				wake_up(&button_waitq);
+				//report key down
+			}else{
+				gpio->status0 &= ~(1<<i);
+			}
+		}
+	}	
+
+	spin_unlock(&gpio->lock);
+	return HRTIMER_NORESTART;
+
+}
+
+
 static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
 {
 	struct lpc178x_gpio *gpio = (struct lpc178x_gpio *) dev_id;
 
-	int status;
+	int data = 0;
 
 		for(i=0; i<BTN_NUM; i++){ 
-			if((BTN_## i) < (LPC178X_P0 + 32)){
+			if((btn_data[i].pin) < (LPC178X_P0 + 32)){
 				//port 0
-				if(BTN_## i ##_MSK & LPC178X_GPIO_FALLING){	
+				if(btn_data[i].pin_flag & LPC178X_GPIO_FALLING){	
 					data = btn_readl(gpio->reg_base + LPC178X_INT_STATF0);
 					//TODO
 					if(data & (1<<i)){
 						//report key
+						gpio->status0 |= (1<<i);
 						btn_wirtel(1<<i, gpio->reg_base + LPC178X_INT_CLR0);
 					}
 				}	
-				if(BTN_## i ##_MSK & LPC178X_GPIO_RISING){	
+				if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){	
 					data = btn_readl(gpio->reg_base + LPC178X_INT_STATR0);
 					//TODO
 					if(data & (1<<i)){
+						gpio->status0 &= ~(1<<i);
 						btn_wirtel(data, gpio->reg_base + LPC178X_INT_CLR0);
 					}
 				}	
 			}	
-			if((BTN_## i) >= (LPC178X_P2)){
+			if((btn_data[i].pin) >= (LPC178X_P2)){
 				//port 2
-				if(BTN_## i ##_MSK & LPC178X_GPIO_FALLING){	
+				if(btn_data[i].pin_flag & LPC178X_GPIO_FALLING){	
 					data = btn_readl(gpio->reg_base + LPC178X_INT_STATF2);
 					//TODO
 					if(data & (1<<i)){
+						gpio->status2 |= (1<<i);
 						btn_wirtel(data, gpio->reg_base + LPC178X_INT_CLR2);
 					}
 				}	
-				if(BTN_## i ##_MSK & LPC178X_GPIO_RISING){	
+				if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){	
 					data = btn_readl(gpio->reg_base + LPC178X_INT_STATR2);
 					//TODO
 					if(data & (1<<i)){
+						gpio->status2 &= ~(1<<i);
 						btn_wirtel(data, gpio->reg_base + LPC178X_INT_CLR2);
 					}
 				}	
 			}	
+		}
+
+		if(gpio->status0 || gpio->status2){
+			hrtimer_start(&gpio->timer, ktime_set(0, BTN_DEBOUNCE_DELAY), HRTIMER_MODE_REL);
+
 		}
 		
 		return IRQ_HANDLED;
@@ -208,6 +292,12 @@ static int button_probe(struct platform_device *pdev)
 			}
 		}
 	}
+
+	hrtimer_init(&gpio->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	gpio->timer.function = btn_timer;
+
+	spin_lock_init(&gpio->lock);
+
 
 Error_release_nothing:
 Done:
