@@ -1,3 +1,16 @@
+#include <linux/hwmon.h>
+#include <linux/init.h>
+#include <linux/err.h>
+#include <linux/delay.h>
+#include <linux/input.h>
+#include <linux/interrupt.h>
+#include <linux/slab.h>
+#include <linux/gpio.h>
+#include <linux/types.h>
+#include <linux/miscdevice.h>
+#include <linux/poll.h>
+#include <mach/touch.h>
+#include <asm/irq.h>
 
 
 #define BTN_DEBOUNCE_DELAY   (20 * 1000000)   /* ns delay before the first sample */
@@ -39,6 +52,7 @@
 
 static DECLARE_WAIT_QUEUE_HEAD(button_waitq);
 static volatile int ev_press = 0;
+static volatile int key_value[2];
 
 struct btn_lpc1788 {
 	unsigned int pin;
@@ -88,27 +102,34 @@ struct lpc178x_gpio {
 
 
 
-static int lpc178x_btn_open(sttic inode *inode, struct file *file)
+static int lpc178x_btn_open(static inode *inode, struct file *file)
 {
 	return 0;
 }
 
-static int lpc178x_btn_close(sttic inode *inode, struct file *file)
+static int lpc178x_btn_close(static inode *inode, struct file *file)
 {
 	return 0;
 }
 
-static int lpc178x_btn_read(sttic file *file, char __user *buff, size_t count, loff_t *offset)
+static int lpc178x_btn_read(static file *file, char __user *buff, size_t count, loff_t *offset)
 {
+	unsigned long err;
 
-	if(file->f_flags & O_NONBLOCK)
-		return -EAGAIN;
-	else
-		wait_event_interruptible(button_waitq, ev_press);
-	return 0;
+	if(!ev_press){
+		if(file->f_flags & O_NONBLOCK)
+			return -EAGAIN;
+		else
+			wait_event_interruptible(button_waitq, ev_press);
+	}
+
+	ev_press = 0;
+
+	err = copy_to_user(buff, (const void*)key_value, min(sizeof(key_value), count));
+	return err ? -EFAULT : min(sizeof(key_value), count);
 }
 
-static int lpc178x_btn_poll(sttic file *file, struct poll_table_struct *wait)
+static int lpc178x_btn_poll(static file *file, struct poll_table_struct *wait)
 {
 	return 0;
 }
@@ -148,21 +169,49 @@ static enum hrtimer_restart btn_timer(struct hrtimer *handle)
 			data = gpio_get_value(btn_data[i].pin_num);
 			if((data<<i) & gpio->status0){
 				//report key down
-				wake_up(&button_waitq);
+				ev_press = 1;
+				if(BTN_NUM < 32){
+					key_value[0] |= 1<<i;
+				}
+				if(BTN_NUM >= 32){
+					key_value[1] |= 1<<i;
+				}
 			}else{
+				if(BTN_NUM < 32){
+					key_value[0] &= ~(1<<i);
+				}
+				if(BTN_NUM >= 32){
+					key_value[1] &= ~(1<<i);
+				}
 				gpio->status0 &= ~(1<<i);
 			}
 		}
 		if((btn_data[i].pin) >= (LPC178X_P2)){
 			data = gpio_get_value(btn_data[i].pin_num);
 			if((data<<i) & gpio->status2){
-				wake_up(&button_waitq);
+				ev_press = 1;
+				if(BTN_NUM < 32){
+					key_value[0] |= 1<<i;
+				}
+				if(BTN_NUM >= 32){
+					key_value[1] |= 1<<i;
+				}
 				//report key down
 			}else{
+				if(BTN_NUM < 32){
+					key_value[0] &= ~(1<<i);
+				}
+				if(BTN_NUM >= 32){
+					key_value[1] &= ~(1<<i);
+				}
 				gpio->status0 &= ~(1<<i);
 			}
 		}
 	}	
+
+	if(ev_press == 1){
+		wake_up_interrupt(&button_waitq);
+	}
 
 	spin_unlock(&gpio->lock);
 	return HRTIMER_NORESTART;
