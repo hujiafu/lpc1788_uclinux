@@ -1,5 +1,15 @@
-
-
+#include <linux/init.h>
+#include <linux/platform_device.h>
+#include <linux/sysdev.h>
+#include <linux/io.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
+#include <linux/i2c.h>
+#include <linux/i2c/at24.h>
+#include <mach/lpc178x.h>
+#include <mach/clock.h>
+#include <mach/power.h>
+#include <mach/gpio.h>
 #include <mach/i2c.h>
 
 
@@ -16,7 +26,8 @@ static struct i2c_board_info at24C08_i2c_devices[] = {
 	},
 };
 
-
-i2c_register_board_info(0, at24C08_i2c_devices, ARRAY_SIZE(at24C08_i2c_devices));
-
+void __init lpc178x_at24C08_init(void)
+{
+	i2c_register_board_info(0, at24C08_i2c_devices, ARRAY_SIZE(at24C08_i2c_devices));
+}
 

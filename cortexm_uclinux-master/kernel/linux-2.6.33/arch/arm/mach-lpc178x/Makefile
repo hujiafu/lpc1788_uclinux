@@ -11,6 +11,7 @@ obj-$(CONFIG_USB_OHCI_HCD)	+= ohci.o
 obj-$(CONFIG_MMC_ARMMMCI)	+= sdcard.o
 obj-$(CONFIG_I2C_LPC2K)		+= i2c.o
 obj-$(CONFIG_I2C_GPIO)		+= i2c-gpio.o
+obj-$(CONFIG_I2C_AT24C08)	+= at24C08.o
 obj-$(CONFIG_SPI_LPC1788)	+= spi.o
 obj-$(CONFIG_TOUCHSCREEN_TSC2046)	+= touch.o
 obj-$(CONFIG_FB_ARMCLCD)	+= lpc1788_lcd.o
