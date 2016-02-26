@@ -441,7 +441,13 @@ static int i2c_lpc2k_probe(struct platform_device *dev)
 	int ret, irq;
 	unsigned long clkrate;
 
-	res = platform_get_resource(dev, IORESOURCE_MEM, 0);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (! regs) {
+		dev_err(&dev->dev, "no register base for I2C controller %d\n",
+                        bus);
+		return -ENODEV;
+	}
+
 	irq = platform_get_irq(dev, 0);
 	if (res == NULL || irq < 0) {
 		dev_err(&dev->dev, "No resource data!\n");
@@ -480,7 +486,7 @@ static int i2c_lpc2k_probe(struct platform_device *dev)
 		goto eclk;
 	}
 
-	i2c->reg_base = ioremap(res->start, resource_size(res));
+	i2c->reg_base = ioremap(res->start, res->end - res->start + 1);
 	if (!i2c->reg_base) {
 		dev_err(&dev->dev, "Error mapping memory!\n");
 		ret = -EIO;

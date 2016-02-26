@@ -1160,7 +1160,7 @@ static int __devinit spi_lpc1788_probe(struct platform_device *pdev)
 	/*
  	 * Map in the controller registers
  	 */
-	c->regs = ioremap(regs->start, resource_size(regs));
+	c->regs = ioremap(regs->start, regs->end - regs->start + 1);
 	if (!c->regs) {
 		dev_err(&pdev->dev, "unable to map registers for "
 			"SPI controller %d, base=%08x\n", bus, regs->start);
