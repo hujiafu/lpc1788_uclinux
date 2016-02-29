@@ -1,4 +1,30 @@
 
+
+#define LPC178X_INT_STATUS	0x0	
+#define LPC178X_INT_STATR0	0x4	
+#define LPC178X_INT_STATF0	0x8	
+#define LPC178X_INT_CLR0	0xC	
+#define LPC178X_INT_ENR0	0x10	
+#define LPC178X_INT_ENF0	0x14
+#define LPC178X_INT_STATR2	0x24	
+#define LPC178X_INT_STATF2	0x28	
+#define LPC178X_INT_CLR2	0x2C	
+#define LPC178X_INT_ENR2	0x30	
+#define LPC178X_INT_ENF2	0x34
+
+#define LPC178X_P0	0x0
+#define LPC178X_P2	(32 * 2)
+
+#define LPC178X_GPIO_RISING	0x1
+#define LPC178X_GPIO_FALLING 0x2
+
+#define BTN_0	LPC178X_P0 + 1
+#define BTN_1	LPC178X_P2 + 4
+
+#define BTN_0_MSK LPC178X_GPIO_FALLING 
+#define BTN_1_MSK LPC178X_GPIO_FALLING 
+
+#define BTN_NUM	2
 /*
  * Driver verbosity level: 0->silent; >0->verbose (1 to 4, growing verbosity)
  */
@@ -59,12 +85,71 @@ static struct miscdevice misc = {
 	.fops = &dev_fops,
 };
 
+static inline unsigned long btn_readl(void __iomem *reg)
+{
+	return __raw_readl(reg);
+}
+
+static inline void btn_writel(unsigned long val, void __iomem *reg)
+{
+	__raw_writel(val, reg);
+}
+
+static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
+{
+	struct lpc178x_gpio *gpio = (struct lpc178x_gpio *) dev_id;
+
+	int status;
+
+		for(i=0; i<BTN_NUM; i++){ 
+			if((BTN_## i) < (LPC178X_P0 + 32)){
+				//port 0
+				if(BTN_## i ##_MSK & LPC178X_GPIO_FALLING){	
+					data = btn_readl(gpio->reg_base + LPC178X_INT_STATF0);
+					//TODO
+					if(data & (1<<i)){
+						//report key
+						btn_wirtel(1<<i, gpio->reg_base + LPC178X_INT_CLR0);
+					}
+				}	
+				if(BTN_## i ##_MSK & LPC178X_GPIO_RISING){	
+					data = btn_readl(gpio->reg_base + LPC178X_INT_STATR0);
+					//TODO
+					if(data & (1<<i)){
+						btn_wirtel(data, gpio->reg_base + LPC178X_INT_CLR0);
+					}
+				}	
+			}	
+			if((BTN_## i) >= (LPC178X_P2)){
+				//port 2
+				if(BTN_## i ##_MSK & LPC178X_GPIO_FALLING){	
+					data = btn_readl(gpio->reg_base + LPC178X_INT_STATF2);
+					//TODO
+					if(data & (1<<i)){
+						btn_wirtel(data, gpio->reg_base + LPC178X_INT_CLR2);
+					}
+				}	
+				if(BTN_## i ##_MSK & LPC178X_GPIO_RISING){	
+					data = btn_readl(gpio->reg_base + LPC178X_INT_STATR2);
+					//TODO
+					if(data & (1<<i)){
+						btn_wirtel(data, gpio->reg_base + LPC178X_INT_CLR2);
+					}
+				}	
+			}	
+		}
+		
+		return IRQ_HANDLED;
+
+}
+
 
 static int button_probe(struct platform_device *pdev)
 {
 	struct lpc178x_gpio *gpio;
 	struct resource *regs;
 	int ret = 0;
+	int i = 0;
 
 	gpio = kzalloc(sizeof(struct lpc178x_gpio), GFP_KERNEL);
 	if (!gpio) {
@@ -98,6 +183,31 @@ static int button_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, gpio);
+
+	ret = request_irq(gpio->irq, btn_lpc1788_handler, IRQF_DISABLED | SA_SHIRQ,
+		"lpc178x-gpio", gpio);
+	if (ret)
+		goto Error_release_nothing;
+
+
+	for(i=0; i<BTN_NUM; i++){
+		if((BTN_## i) < (LPC178X_P0 + 32)){
+			if(BTN_## i ##_MSK & LPC178X_GPIO_RISING){
+				btn_wirtel(1<<i, gpio->reg_base + LPC178X_INT_ENR0);
+			}
+			if(BTN_## i ##_MSK & LPC178X_GPIO_FALLING){
+				btn_wirtel(1<<i, gpio->reg_base + LPC178X_INT_ENF0);
+			}
+		}
+		if((BTN_## i) >= (LPC178X_P2)){
+			if(BTN_## i ##_MSK & LPC178X_GPIO_RISING){
+				btn_wirtel(1<<i, gpio->reg_base + LPC178X_INT_ENR2);
+			}
+			if(BTN_## i ##_MSK & LPC178X_GPIO_FALLING){
+				btn_wirtel(1<<i, gpio->reg_base + LPC178X_INT_ENF2);
+			}
+		}
+	}
 
 Error_release_nothing:
 Done:
