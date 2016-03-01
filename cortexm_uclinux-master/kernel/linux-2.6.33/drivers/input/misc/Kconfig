@@ -319,4 +319,11 @@ config INPUT_PCAP
 	  To compile this driver as a module, choose M here: the
 	  module will be called pcap_keys.
 
+config INPUT_KEY_LPC178X
+	tristate "lpc178x misc input events"
+	depends on ARCH_LPC178X
+	help
+	  lpc178x key button driver
+
+
 endif

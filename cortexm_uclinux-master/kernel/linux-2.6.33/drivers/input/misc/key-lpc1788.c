@@ -1,4 +1,8 @@
+
 #include <linux/hwmon.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/err.h>
 #include <linux/delay.h>
@@ -9,6 +13,10 @@
 #include <linux/types.h>
 #include <linux/miscdevice.h>
 #include <linux/poll.h>
+#include <linux/fs.h>
+#include <linux/device.h>
+#include <linux/io.h>
+#include <linux/sched.h>
 #include <mach/touch.h>
 #include <asm/irq.h>
 
@@ -34,8 +42,8 @@
 #define LPC178X_GPIO_RISING	0x1
 #define LPC178X_GPIO_FALLING 0x2
 
-#define BTN_0	LPC178X_P0 + 1
-#define BTN_1	LPC178X_P2 + 4
+#define LPC178X_BTN_0	(LPC178X_P0 + 1)
+#define LPC178X_BTN_1	(LPC178X_P2 + 4)
 #define BTN_0_PIN	LPC178X_GPIO_MKPIN(0,1)
 #define BTN_1_PIN	LPC178X_GPIO_MKPIN(2,4)
 
@@ -60,14 +68,14 @@ struct btn_lpc1788 {
 	unsigned int pin_num;
 };
 
-static struct btn_lpc1788 btn_data = {
+static struct btn_lpc1788 btn_data[] = {
 	{
-		.pin = BTN_0,
+		.pin = LPC178X_BTN_0,
 		.pin_flag = BTN_0_MSK,
 		.pin_num = BTN_0_PIN,
 	},
 	{
-		.pin = BTN_1,
+		.pin = LPC178X_BTN_1,
 		.pin_flag = BTN_1_MSK,
 		.pin_num = BTN_1_PIN,
 	},
@@ -102,17 +110,17 @@ struct lpc178x_gpio {
 
 
 
-static int lpc178x_btn_open(static inode *inode, struct file *file)
+static int lpc178x_btn_open(struct inode *inode, struct file *file)
 {
 	return 0;
 }
 
-static int lpc178x_btn_close(static inode *inode, struct file *file)
+static int lpc178x_btn_close(struct inode *inode, struct file *file)
 {
 	return 0;
 }
 
-static int lpc178x_btn_read(static file *file, char __user *buff, size_t count, loff_t *offset)
+static int lpc178x_btn_read(struct file *file, char __user *buff, size_t count, loff_t *offset)
 {
 	unsigned long err;
 
@@ -129,13 +137,13 @@ static int lpc178x_btn_read(static file *file, char __user *buff, size_t count, 
 	return err ? -EFAULT : min(sizeof(key_value), count);
 }
 
-static int lpc178x_btn_poll(static file *file, struct poll_table_struct *wait)
+static int lpc178x_btn_poll(struct file *file, struct poll_table_struct *wait)
 {
 	return 0;
 }
 
 static struct file_operations dev_fops = {
-	.owner = THIS_MODULE;
+	.owner = THIS_MODULE,
 	.open = lpc178x_btn_open,
 	.release = lpc178x_btn_close,
 	.read = lpc178x_btn_read,
@@ -143,8 +151,8 @@ static struct file_operations dev_fops = {
 };
 
 static struct miscdevice misc = {
-	.minor = MISC_DYNAMIC_MINOR; 
-	.name = "lpc178x_btn";
+	.minor = MISC_DYNAMIC_MINOR, 
+	.name = "lpc178x_btn",
 	.fops = &dev_fops,
 };
 
@@ -161,7 +169,9 @@ static inline void btn_writel(unsigned long val, void __iomem *reg)
 static enum hrtimer_restart btn_timer(struct hrtimer *handle)
 {
 	struct lpc178x_gpio  *gpio = container_of(handle, struct lpc178x_gpio, timer);
-	
+	int i = 0;
+	unsigned int data = 0;
+
 	spin_lock(&gpio->lock);
 	
 	for(i=0; i<BTN_NUM; i++){
@@ -210,7 +220,7 @@ static enum hrtimer_restart btn_timer(struct hrtimer *handle)
 	}	
 
 	if(ev_press == 1){
-		wake_up_interrupt(&button_waitq);
+		wake_up_interruptible(&button_waitq);
 	}
 
 	spin_unlock(&gpio->lock);
@@ -222,7 +232,7 @@ static enum hrtimer_restart btn_timer(struct hrtimer *handle)
 static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
 {
 	struct lpc178x_gpio *gpio = (struct lpc178x_gpio *) dev_id;
-
+	int i = 0;
 	int data = 0;
 
 		for(i=0; i<BTN_NUM; i++){ 
@@ -234,7 +244,7 @@ static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
 					if(data & (1<<i)){
 						//report key
 						gpio->status0 |= (1<<i);
-						btn_wirtel(1<<i, gpio->reg_base + LPC178X_INT_CLR0);
+						btn_writel(1<<i, gpio->reg_base + LPC178X_INT_CLR0);
 					}
 				}	
 				if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){	
@@ -242,7 +252,7 @@ static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
 					//TODO
 					if(data & (1<<i)){
 						gpio->status0 &= ~(1<<i);
-						btn_wirtel(data, gpio->reg_base + LPC178X_INT_CLR0);
+						btn_writel(data, gpio->reg_base + LPC178X_INT_CLR0);
 					}
 				}	
 			}	
@@ -253,7 +263,7 @@ static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
 					//TODO
 					if(data & (1<<i)){
 						gpio->status2 |= (1<<i);
-						btn_wirtel(data, gpio->reg_base + LPC178X_INT_CLR2);
+						btn_writel(data, gpio->reg_base + LPC178X_INT_CLR2);
 					}
 				}	
 				if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){	
@@ -261,7 +271,7 @@ static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
 					//TODO
 					if(data & (1<<i)){
 						gpio->status2 &= ~(1<<i);
-						btn_wirtel(data, gpio->reg_base + LPC178X_INT_CLR2);
+						btn_writel(data, gpio->reg_base + LPC178X_INT_CLR2);
 					}
 				}	
 			}	
@@ -277,7 +287,7 @@ static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
 }
 
 
-static int button_probe(struct platform_device *pdev)
+static __devinit button_probe(struct platform_device *pdev)
 {
 	struct lpc178x_gpio *gpio;
 	struct resource *regs;
@@ -293,16 +303,15 @@ static int button_probe(struct platform_device *pdev)
 
 	gpio->irq = platform_get_irq(pdev, 0);
 	if (gpio->irq < 0) {
-		dev_err(&pdev->dev, "invalid IRQ %d for gpio contoller %d\n",
-			irq, bus);
-		ret = irq;
+		dev_err(&pdev->dev, "invalid IRQ %d for gpio contoller\n",
+			gpio->irq);
+		ret = gpio->irq;
 		goto Error_release_nothing;
 	}
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (! regs) {
-		dev_err(&pdev->dev, "no register base for gpio controller %d\n",
-                        bus);
+		dev_err(&pdev->dev, "no register base for gpio controller\n");
 		ret = -ENXIO;
 		goto Error_release_nothing;
 	}
@@ -317,30 +326,31 @@ static int button_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, gpio);
 
-	ret = request_irq(gpio->irq, btn_lpc1788_handler, IRQF_DISABLED | SA_SHIRQ,
+	ret = request_irq(gpio->irq, btn_lpc1788_handler, IRQF_DISABLED | IRQF_SHARED,
 		"lpc178x-gpio", gpio);
 	if (ret)
 		goto Error_release_nothing;
 
-
+#if 0
 	for(i=0; i<BTN_NUM; i++){
-		if((BTN_## i) < (LPC178X_P0 + 32)){
-			if(BTN_## i ##_MSK & LPC178X_GPIO_RISING){
-				btn_wirtel(1<<i, gpio->reg_base + LPC178X_INT_ENR0);
+		if((btn_data[i].pin) < (LPC178X_P0 + 32)){
+			if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){
+				btn_writel(1<<i, gpio->reg_base + LPC178X_INT_ENR0);
 			}
-			if(BTN_## i ##_MSK & LPC178X_GPIO_FALLING){
-				btn_wirtel(1<<i, gpio->reg_base + LPC178X_INT_ENF0);
+			if(btn_data[i].pin_flag & LPC178X_GPIO_FALLING){
+				btn_writel(1<<i, gpio->reg_base + LPC178X_INT_ENF0);
 			}
 		}
-		if((BTN_## i) >= (LPC178X_P2)){
-			if(BTN_## i ##_MSK & LPC178X_GPIO_RISING){
-				btn_wirtel(1<<i, gpio->reg_base + LPC178X_INT_ENR2);
+		if((btn_data[i].pin) >= (LPC178X_P2)){
+			if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){
+				btn_writel(1<<i, gpio->reg_base + LPC178X_INT_ENR2);
 			}
-			if(BTN_## i ##_MSK & LPC178X_GPIO_FALLING){
-				btn_wirtel(1<<i, gpio->reg_base + LPC178X_INT_ENF2);
+			if(btn_data[i].pin_flag & LPC178X_GPIO_FALLING){
+				btn_writel(1<<i, gpio->reg_base + LPC178X_INT_ENF2);
 			}
 		}
 	}
+#endif
 
 	hrtimer_init(&gpio->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	gpio->timer.function = btn_timer;
@@ -356,19 +366,19 @@ Done:
 
 static int button_remove(struct platform_device *dev)
 {
-	btn_printk("remove\n");
+	btn_printk(1, "remove\n");
 	misc_deregister(&misc);
 	return 0;
 }
 
 
 
-struct platform_driver button_drv = {
+static struct platform_driver button_drv = {
 	.probe = button_probe,
 	.remove = button_remove,
 	.driver = {
 		.owner = THIS_MODULE,
-		.name = "lpc178x-key"
+		.name = "lpc178x-key",
 	},
 };
 

@@ -441,10 +441,10 @@ static int i2c_lpc2k_probe(struct platform_device *dev)
 	int ret, irq;
 	unsigned long clkrate;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (! regs) {
+	res = platform_get_resource(dev, IORESOURCE_MEM, 0);
+	if (! res) {
 		dev_err(&dev->dev, "no register base for I2C controller %d\n",
-                        bus);
+                        dev->id);
 		return -ENODEV;
 	}
 
