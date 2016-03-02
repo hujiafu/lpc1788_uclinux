@@ -21,32 +21,119 @@ struct rfid_data {
 };
 
 
+static struct file_operations dev_fops = {
+	.owner = THIS_MODULE,
+	.open = lpc178x_rfid_open,
+	.release = lpc178x_rfid_close,
+	.read = lpc178x_rfid_read,
+	.poll = lpc178x_rfid_poll,
+};
+
+static struct miscdevice misc = {
+	.minor = MISC_DYNAMIC_MINOR, 
+	.name = "lpc178x_rfid",
+	.fops = &dev_fops,
+};
+
 
 
 static int rfid_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct rfid_platform_data chip;
 	struct rfid_data *rfid;
+	unsigned char id_num[4];
+	bool use_smbus = false;
 	int err;
+	unsigned int i, num_addresses;
 
 	if (client->dev.platform_data) {
 		chip = *(struct rfid_platform_data *)client->dev.platform_data;
 	} else {
 		err = -ENODEV;
-		return err;
+		goto err_out;
+	}
+
+	num_addresses = chip.num_addresses;
+	if(num_address < 1){
+		err = -ENODEV;
+		goto err_out;
 	}
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		err = -EPFNOSUPPORT;
-		return err;
+		goto err_out;
 	}
 
 	rfid = kzalloc(sizeof(struct rfid_data) +
-                1 * sizeof(struct i2c_client *), GFP_KERNEL);
-        if (!rfid) {
-                err = -ENOMEM;
-                goto err_out;
-        }
+                 num_addresses * sizeof(struct i2c_client *), GFP_KERNEL);
+    if (!rfid) {
+		err = -ENOMEM;
+        goto err_out;
+    }
+	mutex_init(&rfid->lock);
+	rfid->use_smbus = use_smbus;
+	rfid->chip = chip;
+	rfid->num_addresses = num_addresses;
+	rfid->client[0] = client;
+
+	/* use dummy devices for multiple-address chips */
+	for (i = 1; i < num_addresses; i++) {
+		rfid->client[i] = i2c_new_dummy(client->adapter,
+					client->addr + i);
+		if (!rfid->client[i]) {
+			dev_err(&client->dev, "address 0x%02x unavailable\n",
+					client->addr + i);
+			err = -EADDRINUSE;
+			goto err_clients;
+		}
+	}
+
+	chip.reg_base = ioremap(chip.start_mem, chip.end_mem - chip.start_mem + 1);
+	if (!chip.reg_base) {
+		dev_err(&client->dev, "unable to map registers for "
+			"gpio controller base=%08x\n", chip.start_mem);
+		ret = -EINVAL;
+		goto err_out;
+	}
+
+
+	ret = request_irq(chip.irq, rfid_lpc1788_handler, IRQF_DISABLED | IRQF_SHARED,
+		"lpc178x-rfid", &chip);
+	if (ret){
+		err = -ENOMEM;
+		goto err_out;
+	}
+
+	if((chip.irq_pin) < (LPC178X_P0 + 32)){
+		if(chip.irq_falleage & 1){
+			rfid_writel(1<<i, chip->reg_base + LPC178X_INT_ENF0);
+		}else{
+		
+		}
+	}
+	if((chip.irq_pin) >= (LPC178X_P2)){
+	
+	}
+
+
+	i2c_set_clientdata(client, rfid);
+
+	sprintf(id_num, "%d", chip.id_num);
+	strcat(misc.name, id_num);
+	
+	ret = misc_register(&misc);
+	if (ret)
+		goto err_out;
+
+
+
+err_clients:
+	for (i = 1; i < num_addresses; i++)
+		if (rfid->client[i])
+			i2c_unregister_device(rfid->client[i]);
+err_out:
+	dev_dbg(&client->dev, "probe error %d\n", err);
+	return err;
 
 
 }

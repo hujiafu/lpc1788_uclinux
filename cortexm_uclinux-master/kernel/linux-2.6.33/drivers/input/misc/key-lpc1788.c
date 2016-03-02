@@ -331,6 +331,10 @@ static __devinit button_probe(struct platform_device *pdev)
 	if (ret)
 		goto Error_release_nothing;
 
+	ret = misc_register(&misc);
+	if (ret)
+		goto Error_release_nothing;
+
 #if 0
 	for(i=0; i<BTN_NUM; i++){
 		if((btn_data[i].pin) < (LPC178X_P0 + 32)){

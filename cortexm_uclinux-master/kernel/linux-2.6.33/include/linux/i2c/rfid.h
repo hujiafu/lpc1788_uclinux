@@ -21,6 +21,16 @@ struct rfid_platform_data {
 	u16		page_size;		/* for writes */
 	u8		flags;
 
+	void __iomem		*reg_base;
+	int		start_mem;
+	int		end_mem;
+	int		irq;
+	int		irq_pin;
+	int		irq_falleage;
+	int		dev_id;
+	unsigned int num_addresses;
+
+
 	void		(*setup)(struct memory_accessor *, void *context);
 	void		*context;
 };
