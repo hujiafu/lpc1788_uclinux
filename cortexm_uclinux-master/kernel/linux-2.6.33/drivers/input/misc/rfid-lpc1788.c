@@ -35,6 +35,55 @@ static struct miscdevice misc = {
 	.fops = &dev_fops,
 };
 
+static int rfid_pin_count = 0;
+static int rfid_pin_flag[10];
+static int rfid_pin_no[10];
+
+
+static irqreturn_t rfid_lpc1788_handler(int this_irq, void *dev_id)
+{
+	struct rfid_data *rfid = (struct rfid_data *) dev_id;
+	unsigned int data;
+	int i = 0;
+
+	for(i=0; i<rfid_pin_count; i++){
+		if(rfid_pin_flag[i] == 1){ //fall eage
+			if(LPC178X_GPIO_GETPORT(rfid_pin_no[i]) == 0){
+				data = btn_readl(rfid->chip.reg_base + LPC178X_INT_STATF0);
+				if(data & (1<<LPC178X_GPIO_GETPIN(rfid_pin_no[i]))){
+				
+				}
+			}
+			if(LPC178X_GPIO_GETPORT(rfid_pin_no[i]) == 2){
+				data = btn_readl(rfid->chip.reg_base + LPC178X_INT_STATF2)
+				if(data & (1<<LPC178X_GPIO_GETPIN(rfid_pin_no[i]))){
+				
+				}
+			}
+		}else{	//rising eage
+			if(LPC178X_GPIO_GETPORT(rfid_pin_no[i]) == 0){
+				data = btn_readl(rfid->chip.reg_base + LPC178X_INT_STATR0);
+				if(data & (1<<LPC178X_GPIO_GETPIN(rfid_pin_no[i]))){
+				
+				}
+			}
+			if(LPC178X_GPIO_GETPORT(rfid_pin_no[i]) == 2){
+				data = btn_readl(rfid->chip.reg_base + LPC178X_INT_STATR2)
+				if(data & (1<<LPC178X_GPIO_GETPIN(rfid_pin_no[i]))){
+				
+				}
+			}
+			
+		}
+	
+	}
+	if(LPC178X_GPIO_GETPORT(rfid->chip.irq_pin) == 2){
+		data = btn_readl(rfid->chip.reg_base + LPC178X_INT_STATF2)
+	}
+
+
+
+}
 
 
 static int rfid_probe(struct i2c_client *client, const struct i2c_device_id *id)
@@ -98,21 +147,26 @@ static int rfid_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 
 	ret = request_irq(chip.irq, rfid_lpc1788_handler, IRQF_DISABLED | IRQF_SHARED,
-		"lpc178x-rfid", &chip);
+		"lpc178x-rfid", rfid);
 	if (ret){
 		err = -ENOMEM;
 		goto err_out;
 	}
 
-	if((chip.irq_pin) < (LPC178X_P0 + 32)){
+
+	if(LPC178X_GPIO_GETPORT(chip.irq_pin) == 0){
 		if(chip.irq_falleage & 1){
-			rfid_writel(1<<i, chip->reg_base + LPC178X_INT_ENF0);
+			rfid_writel(1<<LPC178X_GPIO_GETPIN(chip.irq_pin), chip->reg_base + LPC178X_INT_ENF0);
 		}else{
-		
+			rfid_writel(1<<LPC178X_GPIO_GETPIN(chip.irq_pin), chip->reg_base + LPC178X_INT_ENR0);
 		}
 	}
-	if((chip.irq_pin) >= (LPC178X_P2)){
-	
+	if(LPC178X_GPIO_GETPORT(chip.irq_pin) == 2){
+		if(chip.irq_falleage & 1){
+			rfid_writel(1<<LPC178X_GPIO_GETPIN(chip.irq_pin), chip->reg_base + LPC178X_INT_ENF2);
+		}else{
+			rfid_writel(1<<LPC178X_GPIO_GETPIN(chip.irq_pin), chip->reg_base + LPC178X_INT_ENR2);
+		}
 	}
 
 
