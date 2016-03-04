@@ -1,3 +1,8 @@
+#define DEV_NAME	"rfid"
+#define RFID_MAX_NUM	4
+
+static struct class *rfid_dev_class;
+static struct i2c_client *my_client[RFID_MAX_NUM];
 
 struct rfid_data {
         struct rfid_platform_data chip;
@@ -19,6 +24,18 @@ struct rfid_data {
          */
         struct i2c_client *client[];
 };
+
+
+static int lpc178x_rfid_open(struct inode *inode, struct file *file)
+{
+	int minor = MINOR(inode->i_rdev);
+
+	printk(KERN_ERR "i2cdev_open\n");
+
+	file->private_data = my_client;
+
+	return 0;
+}
 
 
 static struct file_operations dev_fops = {
@@ -94,6 +111,15 @@ static int rfid_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	bool use_smbus = false;
 	int err;
 	unsigned int i, num_addresses;
+
+	printk(KERN_ERR "probe:name = %s,flag =%d,addr = %x,adapter = %d,driver = %s\n",client->name,  
+        client->flags,client->addr,client->adapter->nr,client->driver->driver.name );	
+
+
+	dev = device_create(rfid_dev_class, &my_client->dev,
+						 MKDEV(RFID_MAJOR, chip.dev_id), NULL,
+						 "rfid-%d", chip.dev_id);
+
 
 	if (client->dev.platform_data) {
 		chip = *(struct rfid_platform_data *)client->dev.platform_data;
@@ -208,8 +234,33 @@ static struct i2c_driver rfid_driver = {
 
 static int __init rfid_init(void)
 {
-	return i2c_add_driver(&rfid_driver);
+	int res;
+
+	res = register_chrdev(RFID_MAJOR, DEV_NAME, &dev_fops);
+	if (res)
+		goto out;
+	
+	rfid_dev_class = class_create(THIS_MODULE, DEV_NAME);
+	if (IS_ERR(rfid_dev_class)) {
+		res = PTR_ERR(rfid_dev_class);
+		goto out_unreg_chrdev;
+	}
+
+	res = i2c_add_driver(&rfid_driver);
+	if (res)
+		goto out_unreg_class;
+
+
+out_unreg_class:
+	class_destroy(rfid_dev_class);
+out_unreg_chrdev:
+	unregister_chrdev(RFID_MAJOR, DEV_NAME);
+out:
+	printk(KERN_ERR "%s: Driver Initialisation failed\n", __FILE__);
+	return res;
+
 }
+
 module_init(rfid_init);
 
 static void __exit rfid_exit(void)

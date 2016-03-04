@@ -15,6 +15,7 @@
  * Especially page_size needs extra care, as you risk data loss if your value
  * is bigger than what the chip actually supports!
  */
+#define RFID_MAJOR	112
 
 struct rfid_platform_data {
 	u32		byte_len;		/* size (sum of all addr) */
