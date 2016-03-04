@@ -3,6 +3,7 @@
 
 static struct class *rfid_dev_class;
 static struct i2c_client *my_client[RFID_MAX_NUM];
+static int client_count = 0;
 
 struct rfid_data {
         struct rfid_platform_data chip;
@@ -25,14 +26,24 @@ struct rfid_data {
         struct i2c_client *client[];
 };
 
+static ssize_t lpc178x_rfid_read(struct file *file, char __user *buf, size_t count, loff_t *offset)
+{
+	struct i2c_client *client= (struct i2c_client *)file->private_data;
+}
+
 
 static int lpc178x_rfid_open(struct inode *inode, struct file *file)
 {
 	int minor = MINOR(inode->i_rdev);
 
-	printk(KERN_ERR "i2cdev_open\n");
+	printk(KERN_ERR "i2cdev_open %d\n", minor);
 
-	file->private_data = my_client;
+
+	if(my_client[minor] != NULL){	
+		file->private_data = my_client[minor];
+	}else{
+		return -1;
+	}
 
 	return 0;
 }
@@ -114,19 +125,28 @@ static int rfid_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	printk(KERN_ERR "probe:name = %s,flag =%d,addr = %x,adapter = %d,driver = %s\n",client->name,  
         client->flags,client->addr,client->adapter->nr,client->driver->driver.name );	
-
-
-	dev = device_create(rfid_dev_class, &my_client->dev,
-						 MKDEV(RFID_MAJOR, chip.dev_id), NULL,
-						 "rfid-%d", chip.dev_id);
-
-
+	
 	if (client->dev.platform_data) {
 		chip = *(struct rfid_platform_data *)client->dev.platform_data;
 	} else {
 		err = -ENODEV;
 		goto err_out;
 	}
+	
+	my_client[client_count] = client;
+	client_count++;
+
+	dev = device_create(rfid_dev_class, &client->dev,
+						 MKDEV(RFID_MAJOR, chip.dev_id), NULL,
+						 "rfid-%d", chip.dev_id);
+	if (IS_ERR(dev)) {
+        	res = PTR_ERR(dev);
+        	goto error_out;
+        }
+ 
+
+
+
 
 	num_addresses = chip.num_addresses;
 	if(num_address < 1){
