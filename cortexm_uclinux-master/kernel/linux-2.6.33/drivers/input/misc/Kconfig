@@ -325,5 +325,10 @@ config INPUT_KEY_LPC178X
 	help
 	  lpc178x key button driver
 
+config INPUT_RFID_LPC178X
+	tristate "lpc178x rfid driver"
+	depends on ARCH_LPC178X && I2C
+	help
+	  lpc178x key button driver
 
 endif

@@ -36,33 +36,27 @@
 #define LPC178X_INT_ENR2	0x30	
 #define LPC178X_INT_ENF2	0x34
 
-#define LPC178X_P0	0x0
-#define LPC178X_P2	(32 * 2)
-
 #define LPC178X_GPIO_RISING	0x1
 #define LPC178X_GPIO_FALLING 0x2
 
-#define LPC178X_BTN_0	(LPC178X_P0 + 1)
-#define LPC178X_BTN_1	(LPC178X_P2 + 4)
 #define BTN_0_PIN	LPC178X_GPIO_MKPIN(0,1)
 #define BTN_1_PIN	LPC178X_GPIO_MKPIN(2,4)
-
+#define RFID_0_PIN	LPC178X_GPIO_MKPIN(2,2)
+#define RFID_1_PIN	LPC178X_GPIO_MKPIN(2,3)
 
 #define BTN_0_MSK LPC178X_GPIO_FALLING 
 #define BTN_1_MSK LPC178X_GPIO_FALLING 
+#define RFID_0_MSK LPC178X_GPIO_FALLING 
+#define RFID_1_MSK LPC178X_GPIO_FALLING 
 
-#define KEY_DOWN_P0	0x1
-#define KEY_DOWN_P2	0x2
-#define KEY_UP_P0	0x10
-#define KEY_UP_P2	0x20
-
-#define BTN_NUM	2
+#define BTN_NUM	4
 
 static DECLARE_WAIT_QUEUE_HEAD(button_waitq);
 static volatile int ev_press = 0;
 static volatile int key_value[2];
 
 struct btn_lpc1788 {
+	unsigned int port;
 	unsigned int pin;
 	unsigned int pin_flag;
 	unsigned int pin_num;
@@ -70,14 +64,28 @@ struct btn_lpc1788 {
 
 static struct btn_lpc1788 btn_data[] = {
 	{
-		.pin = LPC178X_BTN_0,
+		.port = LPC178X_GPIO_GETPORT(BTN_0_PIN),
+		.pin = LPC178X_GPIO_GETPIN(BTN_0_PIN),
 		.pin_flag = BTN_0_MSK,
 		.pin_num = BTN_0_PIN,
 	},
 	{
-		.pin = LPC178X_BTN_1,
+		.port = LPC178X_GPIO_GETPORT(BTN_1_PIN),
+		.pin = LPC178X_GPIO_GETPIN(BTN_1_PIN),
 		.pin_flag = BTN_1_MSK,
 		.pin_num = BTN_1_PIN,
+	},
+	{
+		.port = LPC178X_GPIO_GETPORT(RFID_0_PIN),
+		.pin = LPC178X_GPIO_GETPIN(RFID_0_PIN),
+		.pin_flag = RFID_0_MSK,
+		.pin_num = RFID_0_PIN,
+	},
+	{
+		.port = LPC178X_GPIO_GETPORT(RFID_1_PIN),
+		.pin = LPC178X_GPIO_GETPIN(RFID_1_PIN),
+		.pin_flag = RFID_1_MSK,
+		.pin_num = RFID_1_PIN,
 	},
 };
 /*
@@ -175,8 +183,8 @@ static enum hrtimer_restart btn_timer(struct hrtimer *handle)
 	spin_lock(&gpio->lock);
 	
 	for(i=0; i<BTN_NUM; i++){
-		if((btn_data[i].pin) < (LPC178X_P0 + 32)){
-			data = gpio_get_value(btn_data[i].pin_num);
+		if((btn_data[i].port) == 0){
+			data = !gpio_get_value(btn_data[i].pin_num);
 			if((data<<i) & gpio->status0){
 				//report key down
 				ev_press = 1;
@@ -196,8 +204,8 @@ static enum hrtimer_restart btn_timer(struct hrtimer *handle)
 				gpio->status0 &= ~(1<<i);
 			}
 		}
-		if((btn_data[i].pin) >= (LPC178X_P2)){
-			data = gpio_get_value(btn_data[i].pin_num);
+		if((btn_data[i].port) == 2){
+			data = !gpio_get_value(btn_data[i].pin_num);
 			if((data<<i) & gpio->status2){
 				ev_press = 1;
 				if(BTN_NUM < 32){
@@ -236,12 +244,12 @@ static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
 	int data = 0;
 
 		for(i=0; i<BTN_NUM; i++){ 
-			if((btn_data[i].pin) < (LPC178X_P0 + 32)){
+			if((btn_data[i].port) == 0){
 				//port 0
 				if(btn_data[i].pin_flag & LPC178X_GPIO_FALLING){	
 					data = btn_readl(gpio->reg_base + LPC178X_INT_STATF0);
 					//TODO
-					if(data & (1<<i)){
+					if(data & (1<<btn_data[i].pin)){
 						//report key
 						gpio->status0 |= (1<<i);
 						btn_writel(1<<i, gpio->reg_base + LPC178X_INT_CLR0);
@@ -250,18 +258,18 @@ static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
 				if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){	
 					data = btn_readl(gpio->reg_base + LPC178X_INT_STATR0);
 					//TODO
-					if(data & (1<<i)){
+					if(data & (1<<btn_data[i].pin)){
 						gpio->status0 &= ~(1<<i);
 						btn_writel(data, gpio->reg_base + LPC178X_INT_CLR0);
 					}
 				}	
 			}	
-			if((btn_data[i].pin) >= (LPC178X_P2)){
+			if((btn_data[i].port) == 2){
 				//port 2
 				if(btn_data[i].pin_flag & LPC178X_GPIO_FALLING){	
 					data = btn_readl(gpio->reg_base + LPC178X_INT_STATF2);
 					//TODO
-					if(data & (1<<i)){
+					if(data & (1<<btn_data[i].pin)){
 						gpio->status2 |= (1<<i);
 						btn_writel(data, gpio->reg_base + LPC178X_INT_CLR2);
 					}
@@ -269,7 +277,7 @@ static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
 				if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){	
 					data = btn_readl(gpio->reg_base + LPC178X_INT_STATR2);
 					//TODO
-					if(data & (1<<i)){
+					if(data & (1<<btn_data[i].pin)){
 						gpio->status2 &= ~(1<<i);
 						btn_writel(data, gpio->reg_base + LPC178X_INT_CLR2);
 					}
@@ -337,7 +345,7 @@ static __devinit button_probe(struct platform_device *pdev)
 
 #if 0
 	for(i=0; i<BTN_NUM; i++){
-		if((btn_data[i].pin) < (LPC178X_P0 + 32)){
+		if((btn_data[i].port) == 0){
 			if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){
 				btn_writel(1<<i, gpio->reg_base + LPC178X_INT_ENR0);
 			}
@@ -345,7 +353,7 @@ static __devinit button_probe(struct platform_device *pdev)
 				btn_writel(1<<i, gpio->reg_base + LPC178X_INT_ENF0);
 			}
 		}
-		if((btn_data[i].pin) >= (LPC178X_P2)){
+		if((btn_data[i].port) == 2){
 			if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){
 				btn_writel(1<<i, gpio->reg_base + LPC178X_INT_ENR2);
 			}

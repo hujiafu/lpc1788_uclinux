@@ -221,6 +221,14 @@ static void i2c_lpc2k_pump_msg(struct lpc2k_i2c *i2c)
 		if (i2c->msg_idx < i2c->msg->len) {
 			i2c->msg->buf[i2c->msg_idx] =
 				i2c_readl(i2c->reg_base + LPC24XX_I2DAT);
+			/*
+			 *	add for rfid read
+			 */
+			if(i2c->msg->flags & I2C_M_RECV_LEN){
+				if(unlikely(i2c->msg_idx == 0)){
+					i2c->msg->len = i2c->msg->buf[0] + 1;
+				}	
+			}
 			dev_dbg(&i2c->adap.dev, "ACK ok, received "
 				"(0x%02x)\n", i2c->msg->buf[i2c->msg_idx]);
 		}
@@ -332,6 +340,7 @@ static int lpc2k_process_msg(struct lpc2k_i2c *i2c, int msgidx)
 		 * I2C transfer left off and uses the current condition of the
 		 * I2C adapter.
 		 */
+
 		if (unlikely(i2c->msg->flags & I2C_M_NOSTART)) {
 			WARN_ON(i2c->msg->len == 0);
 

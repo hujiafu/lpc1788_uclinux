@@ -1,10 +1,44 @@
+
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/platform_device.h>
+#include <linux/err.h>
+#include <linux/types.h>
+#include <linux/device.h>
+#include <linux/io.h>
+#include <linux/sched.h>
+#include <linux/slab.h>
+#include <linux/delay.h>
+#include <linux/mutex.h>
+#include <linux/fs.h>
+#include <linux/list.h>
+#include <linux/mod_devicetable.h>
+#include <linux/log2.h>
+#include <linux/bitops.h>
+#include <linux/jiffies.h>
+#include <linux/i2c.h>
+#include <linux/i2c/rfid.h>
+#include <linux/uaccess.h>
+
 #define DEV_NAME	"rfid"
 #define RFID_MAX_NUM	4
+
+static struct i2c_device_id rfid_ids[]=
+{
+		{"lpc1788_rfid1",0xA0},
+		{"lpc1788_rfid2",0xB0},
+			{},
+};
+
+
 
 static struct class *rfid_dev_class;
 static struct i2c_client *my_client[RFID_MAX_NUM];
 static int client_count = 0;
+static unsigned char mifarecode[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
+#if 0
 struct rfid_data {
         struct rfid_platform_data chip;
         bool use_smbus;
@@ -25,10 +59,71 @@ struct rfid_data {
          */
         struct i2c_client *client[];
 };
+#endif
+
 
 static ssize_t lpc178x_rfid_read(struct file *file, char __user *buf, size_t count, loff_t *offset)
 {
 	struct i2c_client *client= (struct i2c_client *)file->private_data;
+	struct i2c_adapter *adap;
+	struct i2c_msg msg[2];
+	unsigned char write_buf[11];
+	unsigned char read_buf[20];
+	int xor;
+	int i;
+	int ret = 0;
+
+	if(count < 19){
+		printk(KERN_ERR "rfid read buf less 19\n");
+		goto out;
+	}
+
+	write_buf[0] = 0xA;
+	write_buf[1] = 0x21;
+	write_buf[2] = 0x0;
+	write_buf[3] = 0x0;
+	write_buf[4] = mifarecode[0];
+	write_buf[5] = mifarecode[1];
+	write_buf[6] = mifarecode[2];
+	write_buf[7] = mifarecode[3];
+	write_buf[8] = mifarecode[4];
+	write_buf[9] = mifarecode[5];
+	xor = write_buf[0];
+	for(i=1; i<write_buf[0]; i++){
+		xor ^= write_buf[i];
+	}
+	write_buf[i] = xor;
+
+	if(client == NULL){
+		printk(KERN_ERR "rfid i2c_client is NULL\n");
+		goto out;
+	}
+
+	adap = client->adapter;
+
+	msg[0].addr = client->addr;
+	msg[0].len = write_buf[0] + 1;
+	msg[0].buf = write_buf;
+
+	msg[1].addr = client->addr;
+	msg[1].flags = I2C_M_RD | I2C_M_RECV_LEN;
+	msg[1].len = 19;
+	msg[1].buf = read_buf;//read data
+
+	ret = i2c_transfer(adap, msg, 2);
+	printk(KERN_ERR "i2c_transfer:ret=%d\n",ret);
+
+	if (ret != 2){
+		printk(KERN_ERR "rfid i2c_transfer error\n");
+		goto out;
+	}
+	ret = copy_to_user(buf, read_buf, count);
+	printk(KERN_ERR "copy_to_user:ret=%d\n",ret);
+	if(ret)
+		goto out;
+	return count;
+out:
+	return -1;
 }
 
 
@@ -49,24 +144,31 @@ static int lpc178x_rfid_open(struct inode *inode, struct file *file)
 }
 
 
+static int lpc178x_rfid_close(struct inode *inode, struct file *file)
+{
+	printk(KERN_ERR "lpc178x_rfid_close\n");
+	file->private_data = NULL;
+	return 0;
+}
+
+
 static struct file_operations dev_fops = {
 	.owner = THIS_MODULE,
 	.open = lpc178x_rfid_open,
 	.release = lpc178x_rfid_close,
 	.read = lpc178x_rfid_read,
-	.poll = lpc178x_rfid_poll,
 };
-
+#if 0
 static struct miscdevice misc = {
 	.minor = MISC_DYNAMIC_MINOR, 
 	.name = "lpc178x_rfid",
 	.fops = &dev_fops,
 };
-
+#endif
+#if 0
 static int rfid_pin_count = 0;
 static int rfid_pin_flag[10];
 static int rfid_pin_no[10];
-
 
 static irqreturn_t rfid_lpc1788_handler(int this_irq, void *dev_id)
 {
@@ -112,12 +214,12 @@ static irqreturn_t rfid_lpc1788_handler(int this_irq, void *dev_id)
 
 
 }
-
+#endif
 
 static int rfid_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct rfid_platform_data chip;
-	struct rfid_data *rfid;
+	struct device *dev;
 	unsigned char id_num[4];
 	bool use_smbus = false;
 	int err;
@@ -140,13 +242,13 @@ static int rfid_probe(struct i2c_client *client, const struct i2c_device_id *id)
 						 MKDEV(RFID_MAJOR, chip.dev_id), NULL,
 						 "rfid-%d", chip.dev_id);
 	if (IS_ERR(dev)) {
-        	res = PTR_ERR(dev);
-        	goto error_out;
-        }
+		err = PTR_ERR(dev);
+        goto err_out;
+    }
  
 
 
-
+#if 0
 
 	num_addresses = chip.num_addresses;
 	if(num_address < 1){
@@ -231,24 +333,35 @@ err_clients:
 	for (i = 1; i < num_addresses; i++)
 		if (rfid->client[i])
 			i2c_unregister_device(rfid->client[i]);
+#endif	
+
 err_out:
 	dev_dbg(&client->dev, "probe error %d\n", err);
 	return err;
-
-
 }
 
 
+static int rfid_remove(struct i2c_client *client)
+{
+	struct rfid_platform_data chip;
+	
+	printk(KERN_ERR "rfid_remove\n");
+		
+	if (client->dev.platform_data) {
+		chip = *(struct rfid_platform_data *)client->dev.platform_data;
+		device_destroy(rfid_dev_class, MKDEV(RFID_MAJOR, chip.dev_id));	
+	}
+	return 0;
 
+}
 
 
 static struct i2c_driver rfid_driver = {
 	.driver = {
 		.name = "rfid-lpc1788",
-		.owner = THIS_MODULE,
 	},
 	.probe = rfid_probe,
-	.remove = __devexit_p(rfid_remove),
+	.remove =  __devexit_p(rfid_remove),
 	.id_table = rfid_ids,
 };
 

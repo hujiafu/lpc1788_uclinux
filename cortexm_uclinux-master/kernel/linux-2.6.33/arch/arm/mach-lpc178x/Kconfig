@@ -45,6 +45,11 @@ config I2C_AT24C08
 	bool "Enable LPC178x/7x AT24C08"
 	default n
 
+config I2C_RFID
+	depends on ARCH_LPC178X && I2C_LPC2K
+	bool "Enable LPC178x/7x RFID"
+	default n
+
 config LPC178X_SPI0
 	depends on ARCH_LPC178X && SPI_LPC1788
 	bool "Enable LPC178x/7x SPI0 port"
