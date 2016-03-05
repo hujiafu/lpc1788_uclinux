@@ -245,6 +245,10 @@ static int rfid_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		err = PTR_ERR(dev);
         goto err_out;
     }
+
+	
+	printk(KERN_ERR "%s: rfid_probe successful\n", __FILE__);
+	return 0;
  
 
 
@@ -370,20 +374,25 @@ static int __init rfid_init(void)
 	int res;
 
 	res = register_chrdev(RFID_MAJOR, DEV_NAME, &dev_fops);
-	if (res)
+	if (res){
+		printk(KERN_ERR "%s: register_chrdev failed\n", __FILE__);
 		goto out;
+	}
 	
 	rfid_dev_class = class_create(THIS_MODULE, DEV_NAME);
 	if (IS_ERR(rfid_dev_class)) {
 		res = PTR_ERR(rfid_dev_class);
+		printk(KERN_ERR "%s: class_create failed\n", __FILE__);
 		goto out_unreg_chrdev;
 	}
 
 	res = i2c_add_driver(&rfid_driver);
-	if (res)
+	if (res){
+		printk(KERN_ERR "%s: i2c_add_driver failed\n", __FILE__);
 		goto out_unreg_class;
+	}
 
-
+	return res;
 out_unreg_class:
 	class_destroy(rfid_dev_class);
 out_unreg_chrdev:
