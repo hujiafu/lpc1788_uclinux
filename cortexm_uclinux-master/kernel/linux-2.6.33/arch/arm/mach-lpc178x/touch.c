@@ -17,18 +17,22 @@
 #define LPC178X_SYSCON_BASE		(LPC178X_APB_PERIPH_BASE + 0x000FC000)
 #define LPC178X_EINT_BASE		(LPC178X_SYSCON_BASE + 0x140)
 
+#define LPC178X_EINT0_IRQ	18
 #define LPC178X_EINT1_IRQ	19
 #define LPC178X_EINT2_IRQ	20
 #define LPC178X_EINT3_IRQ	21
 
+#define LPC178X_EINT_0_FLAG		(0x1<<0)
 #define LPC178X_EINT_1_FLAG		(0x1<<1)
 #define LPC178X_EINT_2_FLAG		(0x1<<2)
 #define LPC178X_EINT_3_FALG		(0x1<<3)
 
+#define LPC178X_EINT_0_EAGE		(0x1<<0)
 #define LPC178X_EINT_1_EAGE		(0x1<<1)
 #define LPC178X_EINT_2_EAGE		(0x1<<2)
 #define LPC178X_EINT_3_EAGE		(0x1<<3)
 
+#define LPC178X_EINT_0_FALL		~(0x1<<0)
 #define LPC178X_EINT_1_FALL		~(0x1<<1)
 #define LPC178X_EINT_2_FALL		~(0x1<<2)
 #define LPC178X_EINT_3_FALL		~(0x1<<3)
@@ -66,6 +70,10 @@ static struct spi_board_info __initdata lpc178x_spi_devs[] = {			\
 	},												\
 }
 
+#if defined(CONFIG_LPC178X_TOUCH0)
+TOUCH_PLAT_DEVICE(0);
+#endif
+
 #if defined(CONFIG_LPC178X_TOUCH1)
 TOUCH_PLAT_DEVICE(1);
 #endif
@@ -80,6 +88,11 @@ TOUCH_PLAT_DEVICE(3);
 
 static int lpc178x_touch_iosetup(void)
 {
+
+#if defined(CONFIG_LPC178X_TOUCH0)
+	LPC178X_EINT->extmode |= LPC178X_EINT_0_EAGE;	
+	LPC178X_EINT->extpolar &= LPC178X_EINT_0_FALL;	
+#endif	
 
 #if defined(CONFIG_LPC178X_TOUCH1)
 	LPC178X_EINT->extmode |= LPC178X_EINT_1_EAGE;	
@@ -100,6 +113,10 @@ static int lpc178x_touch_iosetup(void)
 
 static int lpc178x_eint_clear(void)
 {
+
+#if defined(CONFIG_LPC178X_TOUCH0)
+	LPC178X_EINT->extint = LPC178X_EINT_0_FLAG;	
+#endif	
 
 #if defined(CONFIG_LPC178X_TOUCH1)
 	LPC178X_EINT->extint = LPC178X_EINT_1_FLAG;	

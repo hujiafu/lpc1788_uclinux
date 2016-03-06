@@ -53,6 +53,7 @@
 #include <mach/gpio.h>
 #include <mach/touch.h>
 #include <mach/at24C08.h>
+#include <mach/key.h>
 #include <mach/rfid.h>
 #include <mach/ea-lpc1788-pca9532.h>
 #endif /* CONFIG_GPIOLIB */
@@ -239,7 +240,7 @@ static void __init lpc178x_init(void)
 	lpc178x_i2c_init();
 #endif /* defined(CONFIG_I2C_LPC2K) || defined(CONFIG_I2C_LPC2K_MODULE) */
 
-#if defined(CONFIG_SPI_LPC2K)
+#if defined(CONFIG_SPI_LPC1788)
 	/*
 	 * Configure the available SPI interfaces
 	 */
@@ -299,6 +300,10 @@ static void __init lpc178x_init(void)
 
 #if defined(CONFIG_I2C_AT24C08)
 	lpc178x_at24C08_init();
+#endif	
+
+#if defined(CONFIG_LPC178X_KEY)
+	lpc178x_key_init();
 #endif	
 
 #if defined(CONFIG_I2C_RFID)

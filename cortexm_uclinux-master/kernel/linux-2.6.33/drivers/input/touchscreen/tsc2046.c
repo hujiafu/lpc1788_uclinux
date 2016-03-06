@@ -30,6 +30,24 @@
 #include <mach/touch.h>
 #include <asm/irq.h>
 
+
+static int tsc2046_lpc1788_debug = 4;
+
+#define TSC2046_LPC1788_DEBUG 1
+
+#if defined(TSC2046_LPC1788_DEBUG)
+
+#define tsc2046_printk(level, fmt, args...)                                 \
+        if (tsc2046_lpc1788_debug >= level) printk(KERN_INFO "%s: " fmt,    \
+                                           __func__, ## args)
+
+#else
+
+#define tsc2046_printk(level, fmt, args...)
+
+#endif
+
+
 /*
  * This code has been heavily tested on a Nokia 770, and lightly
  * tested on other tsc2046 devices (OSK/Mistral, Lubbock, Spitz).
@@ -729,6 +747,7 @@ static enum hrtimer_restart tsc2046_timer(struct hrtimer *handle)
 		ts->pending = 0;
 	} else {
 		/* pen is still down, continue with the measurement */
+		printk("pen is down......\n");
 		ts->msg_idx = 0;
 		ts->wait_for_sync();
 		status = spi_async(ts->spi, &ts->msg[0]);
@@ -746,7 +765,7 @@ static irqreturn_t tsc2046_irq(int irq, void *handle)
 	unsigned long flags;
 
 	ts->penirq_clear();
-
+	printk("pen irq interrupt\n");
 	spin_lock_irqsave(&ts->lock, flags);
 	if (likely(get_pendown_state(ts))) {
 		if (!ts->irq_disabled) {
@@ -880,13 +899,15 @@ static int __devinit tsc2046_probe(struct spi_device *spi)
 	int				vref;
 	int				err;
 
+	printk("tsc2046_probe++++++++++++++++++++++++++\n");
+
 	if (!spi->irq) {
-		dev_dbg(&spi->dev, "no IRQ?\n");
+		tsc2046_printk(1, "spi->irq no IRQ?\n");
 		return -ENODEV;
 	}
 
 	if (!pdata) {
-		dev_dbg(&spi->dev, "no platform data?\n");
+		tsc2046_printk(1, "spi->dev no platform dta?\n");
 		return -ENODEV;
 	}
 
@@ -896,8 +917,7 @@ static int __devinit tsc2046_probe(struct spi_device *spi)
 
 	/* don't exceed max specified sample rate */
 	if (spi->max_speed_hz > (125000 * SAMPLE_BITS)) {
-		dev_dbg(&spi->dev, "f(sample) %d KHz?\n",
-				(spi->max_speed_hz/SAMPLE_BITS)/1000);
+		tsc2046_printk(1, "f(sample) %d KHz?\n", (spi->max_speed_hz/SAMPLE_BITS)/1000);
 		return -EINVAL;
 	}
 
@@ -915,6 +935,7 @@ static int __devinit tsc2046_probe(struct spi_device *spi)
 	packet = kzalloc(sizeof(struct tsc2046_packet), GFP_KERNEL);
 	input_dev = input_allocate_device();
 	if (!ts || !packet || !input_dev) {
+		tsc2046_printk(1, "input_allocate_device failed\n");
 		err = -ENOMEM;
 		goto err_free_mem;
 	}
@@ -940,8 +961,10 @@ static int __devinit tsc2046_probe(struct spi_device *spi)
 	if (pdata->filter != NULL) {
 		if (pdata->filter_init != NULL) {
 			err = pdata->filter_init(pdata, &ts->filter_data);
-			if (err < 0)
+			if (err < 0){
+				tsc2046_printk(1, "pdata->filter_init failed\n");
 				goto err_free_mem;
+			}
 		}
 		ts->filter = pdata->filter;
 		ts->filter_cleanup = pdata->filter_cleanup;
@@ -959,8 +982,10 @@ static int __devinit tsc2046_probe(struct spi_device *spi)
 	ts->penirq_clear = pdata->eint_clear;
 
 	err = setup_pendown(spi, ts);
-	if (err)
+	if (err){
+		tsc2046_printk(1, "setup_pendown failed\n");
 		goto err_cleanup_filter;
+	}
 
 	if (pdata->penirq_recheck_delay_usecs)
 		ts->penirq_recheck_delay_usecs =
@@ -1153,20 +1178,21 @@ static int __devinit tsc2046_probe(struct spi_device *spi)
 
 	if (request_irq(spi->irq, tsc2046_irq, IRQF_TRIGGER_FALLING,
 			spi->dev.driver->name, ts)) {
-		dev_info(&spi->dev,
-			"trying pin change workaround on irq %d\n", spi->irq);
+		tsc2046_printk(1, "trying pin change workaround on irq %d\n", spi->irq);
 		err = request_irq(spi->irq, tsc2046_irq,
 				  IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
 				  spi->dev.driver->name, ts);
 		if (err) {
-			dev_dbg(&spi->dev, "irq %d busy?\n", spi->irq);
+			tsc2046_printk(1, "irq %d busy?\n", spi->irq);
 			goto err_free_gpio;
 		}
 	}
 
 	err = ads784x_hwmon_register(spi, ts);
-	if (err)
+	if (err){
+		tsc2046_printk(1, "ads784x_hwmon_register failed\n", spi->irq);
 		goto err_free_irq;
+	}
 
 	dev_info(&spi->dev, "touchscreen, irq %d\n", spi->irq);
 
@@ -1177,13 +1203,18 @@ static int __devinit tsc2046_probe(struct spi_device *spi)
 			  READ_12BIT_SER(vaux) | ADS_PD10_ALL_ON);
 
 	err = sysfs_create_group(&spi->dev.kobj, &ads784x_attr_group);
-	if (err)
+	if (err){
+		tsc2046_printk(1, "sysfs_create_group failed\n", spi->irq);
 		goto err_remove_hwmon;
+	}
 
 	err = input_register_device(input_dev);
-	if (err)
+	if (err){
+		tsc2046_printk(1, "input_register_device failed\n", spi->irq);
 		goto err_remove_attr_group;
+	}
 
+	printk("tsc2046 probe successful\n");
 	return 0;
 
  err_remove_attr_group:
@@ -1247,6 +1278,7 @@ static struct spi_driver tsc2046_driver = {
 
 static int __init tsc2046_init(void)
 {
+	printk("tsc2046_init +++++++++++++++\n");
 	return spi_register_driver(&tsc2046_driver);
 }
 module_init(tsc2046_init);

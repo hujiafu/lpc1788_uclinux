@@ -28,8 +28,6 @@
 #include <linux/init.h>
 #include <mach/lpc178x.h>
 
-void __init lpc178x_key_init(void);
-
 struct lpc178x_key {
 
 	u32 IntStatus;
@@ -46,5 +44,6 @@ struct lpc178x_key {
 	u32 IntEnF2;
 };
 
+void __init lpc178x_key_init(void);
 
 #endif /* _MACH_LPC178X_KEY_H_ */

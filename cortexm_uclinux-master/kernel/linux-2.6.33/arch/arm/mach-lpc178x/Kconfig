@@ -10,6 +10,11 @@ config MACH_LPC178X
 menu "LPC178x/7x I/O interfaces"
 	depends on ARCH_LPC178X
 
+config LPC178X_TOUCH0
+	depends on ARCH_LPC178X && TOUCHSCREEN_TSC2046
+	bool "Enable LPC178x/7x SPI0 port"
+	default n
+
 config LPC178X_TOUCH1
 	depends on ARCH_LPC178X && TOUCHSCREEN_TSC2046
 	bool "Enable LPC178x/7x SPI0 port"

@@ -93,6 +93,7 @@ static struct btn_lpc1788 btn_data[] = {
  */
 static int btn_lpc1788_debug = 4;
 
+#define BTN_LPC1788_DEBUG 1
 
 #if defined(BTN_LPC1788_DEBUG)
 
@@ -304,44 +305,46 @@ static __devinit button_probe(struct platform_device *pdev)
 
 	gpio = kzalloc(sizeof(struct lpc178x_gpio), GFP_KERNEL);
 	if (!gpio) {
-		dev_err(&pdev->dev, "Error allocating memory!\n");
+		btn_printk(1, "Error allocating memory\n");
 		ret = -ENOMEM;
 		goto Error_release_nothing;
 	}
 
 	gpio->irq = platform_get_irq(pdev, 0);
 	if (gpio->irq < 0) {
-		dev_err(&pdev->dev, "invalid IRQ %d for gpio contoller\n",
-			gpio->irq);
-		ret = gpio->irq;
+		btn_printk(1, "invalid IRQ %d for gpio contoller\n", gpio->irq);
+		ret = -ENXIO;
 		goto Error_release_nothing;
 	}
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (! regs) {
-		dev_err(&pdev->dev, "no register base for gpio controller\n");
+		btn_printk(1, "no register base for gpio contoller\n");
 		ret = -ENXIO;
 		goto Error_release_nothing;
 	}
 
 	gpio->reg_base = ioremap(regs->start, regs->end - regs->start + 1);
 	if (!gpio->reg_base) {
-		dev_err(&pdev->dev, "unable to map registers for "
-			"gpio controller base=%08x\n", regs->start);
+		btn_printk(1, "unable to map register for gpio controller base=%08x\n", regs->start);
 		ret = -EINVAL;
 		goto Error_release_nothing;
 	}
 
 	platform_set_drvdata(pdev, gpio);
 
-	ret = request_irq(gpio->irq, btn_lpc1788_handler, IRQF_DISABLED | IRQF_SHARED,
-		"lpc178x-gpio", gpio);
-	if (ret)
+	//ret = request_irq(gpio->irq, btn_lpc1788_handler, IRQF_DISABLED | IRQF_SHARED, "lpc178x-gpio", gpio);
+	ret = request_irq(gpio->irq, btn_lpc1788_handler, IRQF_DISABLED, "lpc178x-gpio", gpio);
+	if (ret){
+		btn_printk(1, "request irq failed\n");
 		goto Error_release_nothing;
+	}
 
 	ret = misc_register(&misc);
-	if (ret)
+	if (ret){
+		btn_printk(1, "misc_register failed\n");
 		goto Error_release_nothing;
+	}
 
 #if 0
 	for(i=0; i<BTN_NUM; i++){
@@ -368,7 +371,9 @@ static __devinit button_probe(struct platform_device *pdev)
 	gpio->timer.function = btn_timer;
 
 	spin_lock_init(&gpio->lock);
-
+	
+	btn_printk(1, "key probe successful\n");
+	return 0;
 
 Error_release_nothing:
 Done:
