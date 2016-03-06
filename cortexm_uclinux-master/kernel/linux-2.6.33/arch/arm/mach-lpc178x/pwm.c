@@ -23,7 +23,7 @@ static struct resource lpc178x_pwm## uid ##_resources[] = {		\
         },								\
 };									\
 struct platform_device lpc178x_pwm## uid ##_device = {	\			
-	.name           = "lpc178x-pwm",				\	
+	.name           = "lpc178x-pwm.## uid",				\	
 	.id             = uid,						\
 	.num_resources  = ARRAY_SIZE(lpc178x_pwm## uid ##_resources),\	
 	.resource       = lpc178x_pwm## uid ##_resources,		\
@@ -42,12 +42,14 @@ void __init lpc178x_pwm_init(void)
 
 #if defined(CONFIG_LPC178X_PWM0)
 	lpc178x_pwm0_info.pwm_nr = 2;
+	lpc178x_pwm0_info.max_frenquence = 1000;
 	lpc178x_pwm0_device.dev.platform_data = &lpc178x_pwm0_info;
 	platform_device_register(&lpc178x_pwm0_device);
 #endif
 
 #if defined(CONFIG_LPC178X_PWM1)
 	lpc178x_pwm1_info.pwm_nr = 0;
+	lpc178x_pwm1_info.max_frenquence = 1000;
 	lpc178x_pwm1_device.dev.platform_data = &lpc178x_pwm1_info;
 	platform_device_register(&lpc178x_pwm1_device);
 #endif

@@ -268,6 +268,15 @@ unsigned long lcd_clk_get_rate(struct clk *clk)
 	return rate;
 }
 
+
+unsigned long pwm_clk_get_rate(struct clk *clk)
+{
+	u32 rate;
+	
+	rate = lpc178x_clock_get(CLOCK_PCLK);
+
+	return rate;
+}
 /*
  * Clock for the Ethernet module of the MCU. The clock rate is initialized
  * in `lpc178x_clock_init()`.
@@ -333,6 +342,22 @@ static struct clk clk_wdt = {
 	.pconp_mask	= 0,
 	.rate		= 500000
 };
+/*
+ * Clock for the PWM module of the MCU.
+ *
+ * The clock rate is initialized in lpc178x_clock_init().
+ */
+static struct clk clk_pwm = {
+	{
+	 .pconp_mask	= LPC178X_SCC_PCONP_PCPWM0_MSK,
+	 .clk_get_rate  = pwm_clk_get_rate,
+	},
+	{
+	 .pconp_mask	= LPC178X_SCC_PCONP_PCPWM1_MSK,
+	 .clk_get_rate  = pwm_clk_get_rate,
+	},
+};
+
 
 /*
  * Array of all clock to register with the `clk_*` infrastructure
@@ -353,6 +378,8 @@ static struct clk_lookup lpc178x_clkregs[] = {
 	INIT_CLKREG(&clk_lcd, "dev:clcd", NULL),
 	INIT_CLKREG(&clk_i2s, NULL, "i2s0_ck"),
 	INIT_CLKREG(&clk_wdt, "lpc2k-wdt", NULL),
+	INIT_CLKREG(&clk_pwm[0], "lpc178x-pwm.0", NULL),
+	INIT_CLKREG(&clk_pwm[1], "lpc178x-pwm.1", NULL),
 };
 
 /*

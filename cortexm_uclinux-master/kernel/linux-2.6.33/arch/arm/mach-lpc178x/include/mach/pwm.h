@@ -59,7 +59,7 @@ struct lpc178x_pwm {
 struct lpc178x_pwm_mach_info {
          
 	unsigned int pwm_nr;
- 
+	unsigned long max_frequence; 
 };
 
 
