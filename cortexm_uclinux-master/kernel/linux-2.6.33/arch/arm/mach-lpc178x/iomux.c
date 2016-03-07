@@ -502,6 +502,9 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 	{{2, 12}, LPC178X_GPIO_CONFIG_D(5, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 	/* P2.13 (D) = LCD D19 */
 	{{2, 13}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	
+	/* P1.3 (D) = PWM02 */
+	{{1,  3}, LPC178X_GPIO_CONFIG_D(3, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 #endif /* defined(CONFIG_FB_ARMCLCD) || defined(CONFIG_FB_ARMCLCD_MODULE) */
 
 #if defined(CONFIG_SND_LPC3XXX_SOC) || defined(CONFIG_SND_LPC3XXX_SOC_MODULE)

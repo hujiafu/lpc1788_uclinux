@@ -278,6 +278,14 @@ static ssize_t at24_bin_read(struct kobject *kobj, struct bin_attribute *attr,
 		char *buf, loff_t off, size_t count)
 {
 	struct at24_data *at24;
+#if 0
+	int i = 0;
+	printk("at24_read count = %d, offset = %d\n", count, off);
+	for(i=0; i<count; i++){
+		buf[i] = i+2;
+	}
+	return count;
+#endif
 
 	at24 = dev_get_drvdata(container_of(kobj, struct device, kobj));
 	return at24_read(at24, buf, off, count);
@@ -399,7 +407,10 @@ static ssize_t at24_bin_write(struct kobject *kobj, struct bin_attribute *attr,
 		char *buf, loff_t off, size_t count)
 {
 	struct at24_data *at24;
-
+#if 0
+	printk("at24_write count = %d, offset = %d\n", count, off);
+	return count;
+#endif
 	at24 = dev_get_drvdata(container_of(kobj, struct device, kobj));
 	return at24_write(at24, buf, off, count);
 }
