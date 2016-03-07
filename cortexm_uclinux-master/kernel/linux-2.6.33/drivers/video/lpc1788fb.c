@@ -642,7 +642,7 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
                 goto free_cpufreq;
         }
 
-
+	lpc1788fb_set_par(fbinfo);
 
 	//ret = device_create_file(&pdev->dev, &dev_attr_debug);
          //if (ret) {
