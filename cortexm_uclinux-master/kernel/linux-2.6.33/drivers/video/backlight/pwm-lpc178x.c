@@ -34,6 +34,21 @@
 #define LPC1788_PWM_LER		0x50
 
 
+#define PWM_LPC1788_DEBUG
+
+#if defined(PWM_LPC1788_DEBUG)
+
+static int pwm_lpc1788_debug = 4;
+
+#define pwm_printk(level, fmt, args...)                                   \
+        if (pwm_lpc1788_debug >= level) printk(KERN_INFO "%s: " fmt,    \
+                                           __func__, ## args)
+#else
+
+#define pwm_printk(level, fmt, args...)
+
+#endif
+
 struct pwm_device {
 	struct list_head	 list;
 	struct platform_device	*pdev;
@@ -120,7 +135,7 @@ void pwm_free(struct pwm_device *pwm)
 		pwm->use_count--;
 		pwm->label = NULL;
 	} else
-		printk(KERN_ERR "PWM%d device already freed\n", pwm->pwm_id);
+		pwm_printk(1, "PWM%d device already freed\n", pwm->pwm_id);
 
 	mutex_unlock(&pwm_lock);
 }
@@ -144,9 +159,9 @@ int pwm_enable(struct pwm_device *pwm)
 
 	pwm->running = 1;
 
-	printk("pwm_enable\n");
-	printk("pwm_pcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PCR));
-	printk("pwm_tcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_TCR));
+	pwm_printk(1, "pwm_enable\n");
+	pwm_printk(1, "REG_PWM_PCR = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PCR));
+	pwm_printk(1, "REG_PWM_TCR = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_TCR));
 	
 	return 0;
 }
@@ -167,9 +182,9 @@ void pwm_disable(struct pwm_device *pwm)
 
 	pwm->running = 0;
 	
-	printk("pwm_disable\n");
-	printk("pwm_pcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PCR));
-	printk("pwm_tcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_TCR));
+	pwm_printk(1, "pwm_disable\n");
+	pwm_printk(1, "REG_PWM_PCR = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PCR));
+	pwm_printk(1, "REG_PWM_PCR = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_TCR));
 
 }
 
@@ -189,9 +204,6 @@ static unsigned long pwm_calc_tin(struct pwm_device *pwm, unsigned long freq)
 				pwm->pr_cnt = 0x1<<i;
 				pwm->tcnt = 0x1<<j;
 				pwm->tcmp = pwm->tcnt >> 1;
-				printk("pr_cnt = 0x%x\n", pwm->pr_cnt);
-				printk("tcnt = 0x%x\n", pwm->tcnt);
-				printk("tcmp = 0x%x\n", pwm->tcmp);
 				return 0;
 			}
 		}
@@ -212,6 +224,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	unsigned long tcnt;
 	long tcmp;
 	int percent;
+	int pwm_fre;
 	int ret = 0;
 
 	/* We currently avoid using 64bit arithmetic by using the
@@ -232,7 +245,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 
 	period = NS_IN_HZ / period_ns;
 
-	pwm_dbg(pwm, "duty_ns=%d, period_ns=%d (%lu)\n",
+	pwm_printk(1, "duty_ns=%d, period_ns=%d (%lu)\n",
 		duty_ns, period_ns, period);
 
 	/* Check to see if we are changing the clock rate of the PWM */
@@ -240,7 +253,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	if (pwm->period_ns != period_ns) {
 		ret = pwm_calc_tin(pwm, period);
 		if(ret != 0){
-			printk("pwm_calc_tin failed\n");
+			pwm_printk(1, "pwm_calc_tin failed\n");
 			return -1;
 		}
 
@@ -248,26 +261,28 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 		pwm->duty_ns = duty_ns;
 		percent = (duty_ns * 100) / period_ns;
 		pwm->tcmp = (pwm->tcnt * percent) / 100;
-		printk("percent = %d\n", percent);
-		printk("pwm_tcmp = 0x%x\n", pwm->tcmp);
+		pwm_printk(1, "percent = %d\n", percent);
+		pwm_printk(1, "pwm_tcnt = 0x%x\n", pwm->tcnt);
+		pwm_printk(1, "pwm_tcmp = 0x%x\n", pwm->tcmp);
 	}else{
 	
 		if(pwm->duty_ns != duty_ns){
 			pwm->duty_ns = duty_ns;
 			percent = (duty_ns * 100) / period_ns;
 			pwm->tcmp = (pwm->tcnt * percent) / 100;
-			printk("percent = %d\n", percent);
-			printk("pwm_tcmp = 0x%x\n", pwm->tcmp);
+			pwm_printk(1, "percent = %d\n", percent);
+			pwm_printk(1, "pwm_tcnt = 0x%x\n", pwm->tcnt);
+			pwm_printk(1, "pwm_tcmp = 0x%x\n", pwm->tcmp);
 			if(pwm->pwm_nr == 2){
 				pwm_writel(pwm->tcmp - 1, pwm->reg_base + LPC1788_PWM_MR2);
 				pwm_writel((0x1<<2), pwm->reg_base + LPC1788_PWM_LER); //updata MR2 value
-				printk("pwm_mr2 = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_MR2));
-				printk("pwm_ler = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_LER));
 			}
 
 		}
 		
 	}
+
+	pwm_fre = pwm->clk_rate / (pwm->pr_cnt * pwm->tcnt);
 
 	local_irq_save(flags);
 
@@ -279,18 +294,20 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	if(pwm->pwm_nr == 2){
 		pwm_writel(0x1<<1, pwm->reg_base + LPC1788_PWM_MCR); // PWMTC reset when MCR0 Matched
 		pwm_writel(pwm->tcmp - 1, pwm->reg_base + LPC1788_PWM_MR2);
+		//pwm_writel(0x1<<10, pwm->reg_base + LPC1788_PWM_PCR); //pwm0.2 out put enable
 		pwm_writel((0x1<<2), pwm->reg_base + LPC1788_PWM_LER); //updata MR2 value
 	}
 	
 	local_irq_restore(flags);
 
-	printk("pwm_pr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PR));
-	printk("pwm_mcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_MCR));
-	printk("pwm_mr0 = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_MR0));
-	printk("pwm_mr2 = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_MR2));
-	printk("pwm_ler = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_LER));
-	printk("pwm_pcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PCR));
-	printk("pwm_ctcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_CTCR));
+	pwm_printk(1, "pwm frequence = %d Hz\n", pwm_fre);
+	pwm_printk(1, "REG_PWM_PR = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PR));
+	pwm_printk(1, "REG_PWM_MCR = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_MCR));
+	pwm_printk(1, "REG_PWM_MR0 = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_MR0));
+	pwm_printk(1, "REG_PWM_MR2 = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_MR2));
+	pwm_printk(1, "REG_PWM_LER = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_LER));
+	pwm_printk(1, "REG_PWM_PCR = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PCR));
+	pwm_printk(1, "REG_PWM_CTCR = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_CTCR));
 	
 	return 0;
 }
@@ -315,13 +332,13 @@ static int lpc178x_pwm_defconfig(struct pwm_device *pwm)
 
 	ret = pwm_config(pwm, 500000, 1000000);
 	if(ret != 0){
-		printk("pwm_config failed\n");
+		pwm_printk(1, "pwm_config failed\n");
 		return -1;
 	}
 
 	ret = pwm_enable(pwm);
 	if(ret != 0){
-		printk("pwm_enable failed\n");
+		pwm_printk(1, "pwm_enable failed\n");
 		return -1;
 	}
 	return 0;
@@ -338,7 +355,7 @@ static int lpc178x_pwm_probe(struct platform_device *pdev)
 	int ret;
 
 
-	printk("lpc178x_pwm_probe\n");
+	pwm_printk(1, "lpc178x_pwm_probe\n");
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (! res) {
@@ -380,6 +397,7 @@ static int lpc178x_pwm_probe(struct platform_device *pdev)
 	clk_enable(pwm->clk);
 
 	pwm->clk_rate = clk_get_rate(pwm->clk);
+	pwm_printk(1, "pwm source clk = %d\n", pwm->clk_rate);
 
 	pwm_writel(0xff, pwm->reg_base + LPC1788_PWM_IR);
 	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_TCR);
@@ -388,13 +406,13 @@ static int lpc178x_pwm_probe(struct platform_device *pdev)
 	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_CCR);
 	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_PCR);
 	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_LER);
-
+#if 0
 	ret = lpc178x_pwm_defconfig(pwm);
 	if(ret){
 		dev_err(&pdev->dev, "lpc178x_pwm_defconfig failed\n");
 		goto err_alloc;
 	}
-
+#endif
 	ret = pwm_register(pwm);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to register pwm\n");
@@ -404,7 +422,7 @@ static int lpc178x_pwm_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pwm);
 
-	printk("lpc178x_pwm_probe finish\n");
+	pwm_printk(1, "lpc178x_pwm_probe finish\n");
 	
 	return 0;
 
@@ -441,7 +459,7 @@ static int __init pwm_init(void)
 
 	ret = platform_driver_register(&lpc178x_pwm_driver);
 	if (ret)
-		printk(KERN_ERR "%s: failed to add pwm driver\n", __func__);
+		pwm_printk(1, "%s: failed to add pwm driver\n", __func__);
 
 	return ret;
 }
