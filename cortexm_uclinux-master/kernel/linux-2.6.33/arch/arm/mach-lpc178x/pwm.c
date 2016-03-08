@@ -23,7 +23,7 @@ static struct resource lpc178x_pwm## uid ##_resources[] = {		\
         },								\
 };									\
 struct platform_device lpc178x_pwm## uid ##_device = {	\			
-	.name           = "lpc178x-pwm.## uid",				\	
+	.name           = "lpc178x-pwm",				\	
 	.id             = uid,						\
 	.num_resources  = ARRAY_SIZE(lpc178x_pwm## uid ##_resources),\	
 	.resource       = lpc178x_pwm## uid ##_resources,		\

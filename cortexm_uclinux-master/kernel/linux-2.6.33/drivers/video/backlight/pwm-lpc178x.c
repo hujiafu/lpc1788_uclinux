@@ -1,10 +1,10 @@
-/* arch/arm/plat-s3c/pwm.c
+/*
  *
  * Copyright (c) 2007 Ben Dooks
  * Copyright (c) 2008 Simtec Electronics
  *	Ben Dooks <ben@simtec.co.uk>, <ben-linux@fluff.org>
  *
- * S3C series PWM device core
+ * LPC178X series PWM device core
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,14 +21,18 @@
 
 #include <mach/irqs.h>
 #include <mach/map.h>
+#include <mach/pwm.h>
 
 #include <plat/devs.h>
 #include <plat/regs-timer.h>
 
 #define LPC1788_PWM_IR		0x0
 #define LPC1788_PWM_TCR		0x4
+#define LPC1788_PWM_PR		0xc
 #define LPC1788_PWM_CTCR	0x70
 #define LPC1788_PWM_MCR		0x14
+#define LPC1788_PWM_MR0		0x18
+#define LPC1788_PWM_MR2		0x20
 #define LPC1788_PWM_CCR		0x28
 #define LPC1788_PWM_PCR		0x4C
 #define LPC1788_PWM_LER		0x50
@@ -42,8 +46,8 @@ struct pwm_device {
 	struct clk		*clk;
 	const char		*label;
 
-	unsigned int		 period_ns;
-	unsigned int		 duty_ns;
+	unsigned long		 period_ns;
+	unsigned long		 duty_ns;
 
 	unsigned char		 tcon_base;
 	unsigned char		 running;
@@ -51,32 +55,17 @@ struct pwm_device {
 	unsigned char		 pwm_id;
 
 	void __iomem		*reg_base;
-	unsigned long           clk_rate;
+	unsigned long       clk_rate;
 	unsigned long		max_rate;
+	unsigned int		pr_cnt;
+	unsigned int		tcnt;
+	unsigned int		tcmp;
+
 };
 
 #define pwm_dbg(_pwm, msg...) dev_dbg(&(_pwm)->pdev->dev, msg)
 
 static struct clk *clk_scaler[2];
-
-/* Standard setup for a timer block. */
-
-#define TIMER_RESOURCE_SIZE (1)
-
-#define TIMER_RESOURCE(_tmr, _irq)			\
-	(struct resource [TIMER_RESOURCE_SIZE]) {	\
-		[0] = {					\
-			.start	= _irq,			\
-			.end	= _irq,			\
-			.flags	= IORESOURCE_IRQ	\
-		}					\
-	}
-
-#define DEFINE_S3C_TIMER(_tmr_no, _irq)			\
-	.name		= "s3c24xx-pwm",		\
-	.id		= _tmr_no,			\
-	.num_resources	= TIMER_RESOURCE_SIZE,		\
-	.resource	= TIMER_RESOURCE(_tmr_no, _irq),	\
 
 /* since we already have an static mapping for the timer, we do not
  * bother setting any IO resource for the base.
@@ -93,19 +82,6 @@ static inline void pwm_writel(unsigned long val, void __iomem *reg)
 }
 
 
-
-struct platform_device s3c_device_timer[] = {
-	[0] = { DEFINE_S3C_TIMER(0, IRQ_TIMER0) },
-	[1] = { DEFINE_S3C_TIMER(1, IRQ_TIMER1) },
-	[2] = { DEFINE_S3C_TIMER(2, IRQ_TIMER2) },
-	[3] = { DEFINE_S3C_TIMER(3, IRQ_TIMER3) },
-	[4] = { DEFINE_S3C_TIMER(4, IRQ_TIMER4) },
-};
-
-static inline int pwm_is_tdiv(struct pwm_device *pwm)
-{
-	return clk_get_parent(pwm->clk) == pwm->clk_div;
-}
 
 static DEFINE_MUTEX(pwm_lock);
 static LIST_HEAD(pwm_list);
@@ -155,10 +131,6 @@ void pwm_free(struct pwm_device *pwm)
 
 EXPORT_SYMBOL(pwm_free);
 
-#define pwm_tcon_start(pwm) (1 << (pwm->tcon_base + 0))
-#define pwm_tcon_invert(pwm) (1 << (pwm->tcon_base + 2))
-#define pwm_tcon_autoreload(pwm) (1 << (pwm->tcon_base + 3))
-#define pwm_tcon_manulupdate(pwm) (1 << (pwm->tcon_base + 1))
 
 int pwm_enable(struct pwm_device *pwm)
 {
@@ -166,14 +138,20 @@ int pwm_enable(struct pwm_device *pwm)
 	unsigned long tcon;
 
 	local_irq_save(flags);
-
-	tcon = __raw_readl(S3C2410_TCON);
-	tcon |= pwm_tcon_start(pwm);
-	__raw_writel(tcon, S3C2410_TCON);
+	
+	if(pwm->pwm_nr == 2){
+		pwm_writel(0x1<<10, pwm->reg_base + LPC1788_PWM_PCR); //pwm2 enable out
+	}
+	pwm_writel((0x1<<0 | 0x1<<3), pwm->reg_base + LPC1788_PWM_TCR); //pwm counter enable, pwm enable
 
 	local_irq_restore(flags);
 
 	pwm->running = 1;
+
+	printk("pwm_enable\n");
+	printk("pwm_pcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PCR));
+	printk("pwm_tcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_TCR));
+	
 	return 0;
 }
 
@@ -186,31 +164,44 @@ void pwm_disable(struct pwm_device *pwm)
 
 	local_irq_save(flags);
 
-	tcon = __raw_readl(S3C2410_TCON);
-	tcon &= ~pwm_tcon_start(pwm);
-	__raw_writel(tcon, S3C2410_TCON);
+	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_PCR); //pwm out disable
+	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_TCR); //pwm counter disable, pwm disable
 
 	local_irq_restore(flags);
 
 	pwm->running = 0;
+	
+	printk("pwm_disable\n");
+	printk("pwm_pcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PCR));
+	printk("pwm_tcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_TCR));
+
 }
 
 EXPORT_SYMBOL(pwm_disable);
 
 static unsigned long pwm_calc_tin(struct pwm_device *pwm, unsigned long freq)
 {
-	unsigned long tin_parent_rate;
-	unsigned int div;
-
-	tin_parent_rate = clk_get_rate(clk_get_parent(pwm->clk_div));
-	pwm_dbg(pwm, "tin parent at %lu\n", tin_parent_rate);
-
-	for (div = 2; div <= 16; div *= 2) {
-		if ((tin_parent_rate / (div << 16)) < freq)
-			return tin_parent_rate / div;
+	int i, j;
+	unsigned long pr, mr;
+	
+	for(i=1; i<16; i+=1){
+		pr = pwm->clk_rate >> i;
+		for(j=0; j<16; j+=1){
+			mr = pr >> j;
+			if(mr <= freq){
+				//PWMSEL2 = 0
+				pwm->pr_cnt = 0x1<<i;
+				pwm->tcnt = 0x1<<j;
+				pwm->tcmp = pwm->tcnt >> 1;
+				printk("pr_cnt = 0x%x\n", pwm->pr_cnt);
+				printk("tcnt = 0x%x\n", pwm->tcnt);
+				printk("tcmp = 0x%x\n", pwm->tcmp);
+				return 0;
+			}
+		}
 	}
 
-	return tin_parent_rate / 16;
+	return -1;
 }
 
 #define NS_IN_HZ (1000000000UL)
@@ -224,6 +215,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	unsigned long tcon;
 	unsigned long tcnt;
 	long tcmp;
+	int percent;
 
 	/* We currently avoid using 64bit arithmetic by using the
 	 * fact that anything faster than 1Hz is easily representable
@@ -239,11 +231,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	    duty_ns == pwm->duty_ns)
 		return 0;
 
-	/* The TCMP and TCNT can be read without a lock, they're not
-	 * shared between the timers. */
 
-	tcmp = __raw_readl(S3C2410_TCMPB(pwm->pwm_id));
-	tcnt = __raw_readl(S3C2410_TCNTB(pwm->pwm_id));
 
 	period = NS_IN_HZ / period_ns;
 
@@ -253,52 +241,60 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	/* Check to see if we are changing the clock rate of the PWM */
 
 	if (pwm->period_ns != period_ns) {
-		if (pwm_is_tdiv(pwm)) {
-			tin_rate = pwm_calc_tin(pwm, period);
-			clk_set_rate(pwm->clk_div, tin_rate);
-		} else
-			tin_rate = clk_get_rate(pwm->clk);
+		ret = pwm_calc_tin(pwm, period);
+		if(ret != 0){
+			printk("pwm_calc_tin failed\n");
+			return -1;
+		}
 
 		pwm->period_ns = period_ns;
+		pwm->duty_ns = duty_ns;
+		percent = (duty_ns * 100) / period_ns;
+		pwm->tcmp = (pwm->tcnt * percent) / 100;
+		printk("percent = %d\n", percent);
+		printk("pwm_tcmp = 0x%x\n", pwm->tcmp);
+	}else{
+	
+		if(pwm->duty_ns != duty_ns){
+			pwm->duty_ns = duty_ns;
+			percent = (duty_ns * 100) / period_ns;
+			pwm->tcmp = (pwm->tcnt * percent) / 100;
+			printk("percent = %d\n", percent);
+			printk("pwm_tcmp = 0x%x\n", pwm->tcmp);
+			if(pwm->pwm_nr == 2){
+				pwm_writel(pwm->tcmp - 1, pwm->reg_base + LPC1788_PWM_MR2);
+				pwm_writel((0x1<<2), pwm->reg_base + LPC1788_PWM_LER); //updata MR2 value
+				printk("pwm_mr2 = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_MR2));
+				printk("pwm_ler = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_LER));
+			}
 
-		pwm_dbg(pwm, "tin_rate=%lu\n", tin_rate);
-
-		tin_ns = NS_IN_HZ / tin_rate;
-		tcnt = period_ns / tin_ns;
-	} else
-		tin_ns = NS_IN_HZ / clk_get_rate(pwm->clk);
-
-	/* Note, counters count down */
-
-	tcmp = duty_ns / tin_ns;
-	tcmp = tcnt - tcmp;
-	/* the pwm hw only checks the compare register after a decrement,
-	   so the pin never toggles if tcmp = tcnt */
-	if (tcmp == tcnt)
-		tcmp--;
-
-	pwm_dbg(pwm, "tin_ns=%lu, tcmp=%ld/%lu\n", tin_ns, tcmp, tcnt);
-
-	if (tcmp < 0)
-		tcmp = 0;
-
-	/* Update the PWM register block. */
+		}
+		
+	}
 
 	local_irq_save(flags);
 
-	__raw_writel(tcmp, S3C2410_TCMPB(pwm->pwm_id));
-	__raw_writel(tcnt, S3C2410_TCNTB(pwm->pwm_id));
-
-	tcon = __raw_readl(S3C2410_TCON);
-	tcon |= pwm_tcon_manulupdate(pwm);
-	tcon |= pwm_tcon_autoreload(pwm);
-	__raw_writel(tcon, S3C2410_TCON);
-
-	tcon &= ~pwm_tcon_manulupdate(pwm);
-	__raw_writel(tcon, S3C2410_TCON);
-
+	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_CTCR); //timeing mode
+	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_PCR); //sigle eage mode, PWMSEL2 = 0
+	pwm_writel(pwm->pr_cnt - 1, pwm->reg_base + LPC1788_PWM_PR);
+	pwm_writel(pwm->tcnt - 1, pwm->reg_base + LPC1788_PWM_MR0);
+	pwm_writel((0x1<<0), pwm->reg_base + LPC1788_PWM_LER); //updata MR0 value
+	if(pwm->pwm_nr == 2){
+		pwm_writel(0x1<<1, pwm->reg_base + LPC1788_PWM_MCR); // PWMTC reset when MCR0 Matched
+		pwm_writel(pwm->tcmp - 1, pwm->reg_base + LPC1788_PWM_MR2);
+		pwm_writel((0x1<<2), pwm->reg_base + LPC1788_PWM_LER); //updata MR2 value
+	}
+	
 	local_irq_restore(flags);
 
+	printk("pwm_pr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PR));
+	printk("pwm_mcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_MCR));
+	printk("pwm_mr0 = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_MR0));
+	printk("pwm_mr2 = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_MR2));
+	printk("pwm_ler = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_LER));
+	printk("pwm_pcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_PCR));
+	printk("pwm_ctcr = 0x%x\n", pwm_readl(pwm->reg_base + LPC1788_PWM_CTCR));
+	
 	return 0;
 }
 
@@ -316,32 +312,22 @@ static int pwm_register(struct pwm_device *pwm)
 	return 0;
 }
 
-static int lpc178x_hw_defconfig(struct pwm_device *pwm)
+static int lpc178x_pwm_defconfig(struct pwm_device *pwm)
 {
-	unsigned long pr, mr;
+	int ret;
 
-	for(i=1; i<16; i+=1){
-		pr = pwm->clk_rate >> i;
-		for(j=0; j<16; j+=1){
-			mr = pr >> j;
-			if(mr <= pwm->max_rate){
-				//PWMSEL2 = 0
-				pwm_writel(0x1<<i - 1, pwm->reg_base + LPC1788_PWM_PR);
-				pwm_writel(0x1<<j - 1, pwm->reg_base + LPC1788_PWM_MR0);
-				pwm_writel((0x1<<j)>>1 - 1, pwm->reg_base + LPC1788_PWM_MR1);
-				pwm_writel((0x1 | 0x1<<2), pwm->reg_base + LPC1788_PWM_LER); //updata MR value
-				
-				pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_CTCR); //timeing mode
-				pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_PCR); //sigle eage mode, PWMSEL2 = 0
-				pwm_writel(0x1<<10, pwm->reg_base + LPC1788_PWM_PCR); //pwm2 enable out
-				
-				pwm_writel((0x1<<0 | 0x1<<3), pwm->reg_base + LPC1788_PWM_TCR); //pwm counter enable, pwm enable
-				
-				return 0;	
-			}			
-		}	
-	}	
-	return -1;
+	ret = pwm_config(pwm, 500000, 1000000);
+	if(ret != 0){
+		printk("pwm_config failed\n");
+		return -1;
+	}
+
+	ret = pwm_enable(pwm);
+	if(ret != 0){
+		printk("pwm_enable failed\n");
+		return -1;
+	}
+	return 0;
 }
 
 static int lpc178x_pwm_probe(struct platform_device *pdev)
@@ -349,12 +335,14 @@ static int lpc178x_pwm_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct pwm_device *pwm;
 	struct lpc178x_pwm_mach_info *pwm_info;
+	struct resource *res;
 	unsigned long flags;
 	unsigned long tcon;
 	unsigned int id = pdev->id;
 	int ret;
-	int pwm_nr;
-	struct resource *res;
+
+
+	printk("lpc178x_pwm_probe\n");
 
 	res = platform_get_resource(dev, IORESOURCE_MEM, 0);
 	if (! res) {
@@ -385,6 +373,9 @@ static int lpc178x_pwm_probe(struct platform_device *pdev)
 		dev_err(&dev->dev, "Error mapping memory!\n");
 		return -EIO;
 	}
+
+	snprintf(i2c->adap.name, sizeof(i2c->adap.name), MODULE_NAME ".%u",
+		 pwm->pwm_id);
 	
 	pwm->clk = clk_get(&pdev->dev, NULL);
 	if (!pwm->clk || IS_ERR(pwm->clk)) {
@@ -405,39 +396,23 @@ static int lpc178x_pwm_probe(struct platform_device *pdev)
 	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_PCR);
 	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_LER);
 
-
-///////////////////////////////////////////////
-	local_irq_save(flags);
-
-	tcon = __raw_readl(S3C2410_TCON);
-	tcon |= pwm_tcon_invert(pwm);
-	__raw_writel(tcon, S3C2410_TCON);
-
-	local_irq_restore(flags);
-
+	ret = lpc178x_pwm_defconfig(pwm);
+	if(ret){
+		dev_err(dev, "lpc178x_pwm_defconfig failed\n");
+		goto err_alloc;
+	}
 
 	ret = pwm_register(pwm);
 	if (ret) {
 		dev_err(dev, "failed to register pwm\n");
-		goto err_clk_tdiv;
+		goto err_alloc;
 	}
 
-	pwm_dbg(pwm, "config bits %02x\n",
-		(__raw_readl(S3C2410_TCON) >> pwm->tcon_base) & 0x0f);
-
-	dev_info(dev, "tin at %lu, tdiv at %lu, tin=%sclk, base %d\n",
-		 clk_get_rate(pwm->clk),
-		 clk_get_rate(pwm->clk_div),
-		 pwm_is_tdiv(pwm) ? "div" : "ext", pwm->tcon_base);
 
 	platform_set_drvdata(pdev, pwm);
 	return 0;
 
- err_clk_tdiv:
-	clk_put(pwm->clk_div);
 
- err_clk_tin:
-	clk_put(pwm->clk);
 
  err_alloc:
 	kfree(pwm);
@@ -467,14 +442,6 @@ static struct platform_driver lpc178x_pwm_driver = {
 static int __init pwm_init(void)
 {
 	int ret;
-
-	clk_scaler[0] = clk_get(NULL, "pwm-scaler0");
-	clk_scaler[1] = clk_get(NULL, "pwm-scaler1");
-
-	if (IS_ERR(clk_scaler[0]) || IS_ERR(clk_scaler[1])) {
-		printk(KERN_ERR "%s: failed to get scaler clocks\n", __func__);
-		return -EINVAL;
-	}
 
 	ret = platform_driver_register(&lpc178x_pwm_driver);
 	if (ret)
