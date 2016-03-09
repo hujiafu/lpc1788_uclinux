@@ -43,6 +43,7 @@ static struct clk *clk_find(const char *dev_id, const char *con_id)
 	list_for_each_entry(p, &clocks, node) {
 		match = 0;
 		if (p->dev_id) {
+			printk("dev_id = %s, p->dev_id = %s\n", dev_id, p->dev_id);
 			if (!dev_id || strcmp(p->dev_id, dev_id))
 				continue;
 			match += 2;
@@ -60,6 +61,7 @@ static struct clk *clk_find(const char *dev_id, const char *con_id)
 			best = match;
 		}
 	}
+	printk("\n");
 	return clk;
 }
 

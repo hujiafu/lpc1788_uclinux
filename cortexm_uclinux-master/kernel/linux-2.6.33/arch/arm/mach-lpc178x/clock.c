@@ -347,7 +347,7 @@ static struct clk clk_wdt = {
  *
  * The clock rate is initialized in lpc178x_clock_init().
  */
-static struct clk clk_pwm = {
+static struct clk clk_pwm[2] = {
 	{
 	 .pconp_mask	= LPC178X_SCC_PCONP_PCPWM0_MSK,
 	 .clk_get_rate  = pwm_clk_get_rate,

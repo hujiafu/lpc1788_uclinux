@@ -14,7 +14,7 @@ menuconfig BACKLIGHT_LCD_SUPPORT
 config LCD_CLASS_DEVICE
         tristate "Lowlevel LCD controls"
 	depends on BACKLIGHT_LCD_SUPPORT
-	default m
+	default n
 	help
 	  This framework adds support for low-level control of LCD.
 	  Some framebuffer devices connect to platform-specific LCD modules
@@ -142,7 +142,7 @@ config BACKLIGHT_ATMEL_PWM
 config BACKLIGHT_GENERIC
 	tristate "Generic (aka Sharp Corgi) Backlight Driver"
 	depends on BACKLIGHT_CLASS_DEVICE
-	default y
+	default n
 	help
 	  Say y to enable the generic platform backlight driver previously
 	  known as the Corgi backlight driver. If you have a Sharp Zaurus
@@ -204,6 +204,12 @@ config BACKLIGHT_PWM
 	help
 	  If you have a LCD backlight adjustable by PWM, say Y to enable
 	  this driver.
+
+config BACKLIGHT_PWM_LPC178X
+	tristate "lpc178x PWM based Backlight Driver"
+	depends on BACKLIGHT_CLASS_DEVICE && BACKLIGHT_PWM
+	help
+	   say Y to enable this driver.
 
 config BACKLIGHT_DA903X
 	tristate "Backlight Driver for DA9030/DA9034 using WLED"

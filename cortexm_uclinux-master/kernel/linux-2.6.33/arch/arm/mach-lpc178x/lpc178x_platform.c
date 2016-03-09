@@ -55,6 +55,8 @@
 #include <mach/at24C08.h>
 #include <mach/key.h>
 #include <mach/rfid.h>
+#include <mach/pwm.h>
+#include <mach/bl.h>
 #include <mach/ea-lpc1788-pca9532.h>
 #endif /* CONFIG_GPIOLIB */
 
@@ -308,6 +310,14 @@ static void __init lpc178x_init(void)
 
 #if defined(CONFIG_I2C_RFID)
 	lpc178x_rfid_init();
+#endif	
+
+#if defined(CONFIG_HAVE_PWM)
+	lpc178x_pwm_init();
+#endif	
+
+#if defined(CONFIG_LPC178X_BL)
+	lpc178x_bl_init();
 #endif	
 
 }

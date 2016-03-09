@@ -19,7 +19,7 @@ int main()
 	//struct fb_var_screeninfo vinfo;
 	//struct fb_fix_screeninfo finfo;
 	printf("Hello world\n");
-
+#if 0
 	fd = open("/sys/devices/platform/lpc2k-i2c.0/i2c-0/0-0050/eeprom", O_RDWR);
 	if(fd < 0){
 		printf("Open at24c02 fail\n");
@@ -55,7 +55,7 @@ int main()
 	}
 	printf("\n");
 	return 0;
-
+#endif
 
 
 #if 0

@@ -70,16 +70,19 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	struct pwm_bl_data *pb;
 	int ret;
 
+	printk("pwm_backlight_probe\n");
+
 	if (!data) {
 		dev_err(&pdev->dev, "failed to find platform data\n");
 		return -EINVAL;
 	}
-
+	printk("test a\n");
 	if (data->init) {
 		ret = data->init(&pdev->dev);
 		if (ret < 0)
 			return ret;
 	}
+	printk("test b\n");
 
 	pb = kzalloc(sizeof(*pb), GFP_KERNEL);
 	if (!pb) {
@@ -87,6 +90,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_alloc;
 	}
+	printk("test c\n");
 
 	pb->period = data->pwm_period_ns;
 	pb->notify = data->notify;
@@ -100,6 +104,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	} else
 		dev_dbg(&pdev->dev, "got pwm for backlight\n");
 
+	printk("test d\n");
 	bl = backlight_device_register(dev_name(&pdev->dev), &pdev->dev,
 			pb, &pwm_backlight_ops);
 	if (IS_ERR(bl)) {
@@ -108,11 +113,13 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		goto err_bl;
 	}
 
+	printk("test e\n");
 	bl->props.max_brightness = data->max_brightness;
 	bl->props.brightness = data->dft_brightness;
 	backlight_update_status(bl);
 
 	platform_set_drvdata(pdev, bl);
+	printk("pwm_backlight_probe finish\n");
 	return 0;
 
 err_bl:

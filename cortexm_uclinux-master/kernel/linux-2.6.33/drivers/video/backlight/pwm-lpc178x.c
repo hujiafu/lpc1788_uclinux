@@ -20,11 +20,7 @@
 #include <linux/pwm.h>
 
 #include <mach/irqs.h>
-#include <mach/map.h>
 #include <mach/pwm.h>
-
-#include <plat/devs.h>
-#include <plat/regs-timer.h>
 
 #define LPC1788_PWM_IR		0x0
 #define LPC1788_PWM_TCR		0x4
@@ -60,7 +56,7 @@ struct pwm_device {
 	unsigned int		pr_cnt;
 	unsigned int		tcnt;
 	unsigned int		tcmp;
-
+	int					pwm_nr;
 };
 
 #define pwm_dbg(_pwm, msg...) dev_dbg(&(_pwm)->pdev->dev, msg)
@@ -216,6 +212,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	unsigned long tcnt;
 	long tcmp;
 	int percent;
+	int ret = 0;
 
 	/* We currently avoid using 64bit arithmetic by using the
 	 * fact that anything faster than 1Hz is easily representable
@@ -332,7 +329,6 @@ static int lpc178x_pwm_defconfig(struct pwm_device *pwm)
 
 static int lpc178x_pwm_probe(struct platform_device *pdev)
 {
-	struct device *dev = &pdev->dev;
 	struct pwm_device *pwm;
 	struct lpc178x_pwm_mach_info *pwm_info;
 	struct resource *res;
@@ -344,23 +340,23 @@ static int lpc178x_pwm_probe(struct platform_device *pdev)
 
 	printk("lpc178x_pwm_probe\n");
 
-	res = platform_get_resource(dev, IORESOURCE_MEM, 0);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (! res) {
-		dev_err(&dev->dev, "no register base for pwm controller %d\n",
-                        dev->id);
+		dev_err(&pdev->dev, "no register base for pwm controller %d\n",
+                        pdev->id);
 		return -ENODEV;
 	}
 
 	pwm_info = (struct lpc178x_pwm_mach_info *)pdev->dev.platform_data;
 	if(pwm_info == NULL){
-		dev_err(&dev->dev, "no platform_data for pwm controller %d\n",
-                        dev->id);
+		dev_err(&pdev->dev, "no platform_data for pwm controller %d\n",
+                        pdev->id);
 		return -ENODEV;
 	}
 
 	pwm = kzalloc(sizeof(struct pwm_device), GFP_KERNEL);
 	if (pwm == NULL) {
-		dev_err(dev, "failed to allocate pwm_device\n");
+		dev_err(&pdev->dev, "failed to allocate pwm_device\n");
 		return -ENOMEM;
 	}
 
@@ -370,16 +366,13 @@ static int lpc178x_pwm_probe(struct platform_device *pdev)
 	
 	pwm->reg_base = ioremap(res->start, res->end - res->start);
 	if (!pwm->reg_base) {
-		dev_err(&dev->dev, "Error mapping memory!\n");
+		dev_err(&pdev->dev, "Error mapping memory!\n");
 		return -EIO;
 	}
-
-	snprintf(i2c->adap.name, sizeof(i2c->adap.name), MODULE_NAME ".%u",
-		 pwm->pwm_id);
 	
 	pwm->clk = clk_get(&pdev->dev, NULL);
 	if (!pwm->clk || IS_ERR(pwm->clk)) {
-		dev_err(dev, "failed to get pwm tin clk\n");
+		dev_err(&pdev->dev, "failed to get pwm tin clk\n");
 		ret = PTR_ERR(pwm->clk);
 		goto err_alloc;
 	}
@@ -398,18 +391,21 @@ static int lpc178x_pwm_probe(struct platform_device *pdev)
 
 	ret = lpc178x_pwm_defconfig(pwm);
 	if(ret){
-		dev_err(dev, "lpc178x_pwm_defconfig failed\n");
+		dev_err(&pdev->dev, "lpc178x_pwm_defconfig failed\n");
 		goto err_alloc;
 	}
 
 	ret = pwm_register(pwm);
 	if (ret) {
-		dev_err(dev, "failed to register pwm\n");
+		dev_err(&pdev->dev, "failed to register pwm\n");
 		goto err_alloc;
 	}
 
 
 	platform_set_drvdata(pdev, pwm);
+
+	printk("lpc178x_pwm_probe finish\n");
+	
 	return 0;
 
 
