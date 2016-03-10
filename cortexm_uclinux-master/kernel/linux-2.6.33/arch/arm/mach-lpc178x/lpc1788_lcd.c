@@ -76,15 +76,15 @@ static struct lpc1788fb_display lpc1788_lcd_cfg[] __initdata = {
          [0] = { /* mini2440 + 3.5" TFT + touchscreen */
                  _LCD_DECLARE(
                          7,                      /* The 3.5 is quite fast */
-                         480, 5, 40, 20,         /* x timing */
-                         272, 8, 8, 10,           /* y timing */
+                         480, 40, 45, 1,         /* x timing */
+                         272, 10, 20, 1,           /* y timing */
                          60),                    /* refresh rate */
-				 .max_fre		= 12000000,
+				 .max_fre		= 9000000,
 				 .min_fre		= 5000000,	 
 				 .lcdctrl		= (LPC178X_LCD_TFT | LPC178X_LCD_16BPP_565),
                  .lcdpol        = (LPC178X_LCD_FP_LOW |
                                     LPC178X_LCD_LP_LOW |
-                                    LPC178X_LCD_DATA_FALL_EAGE |
+                                    //LPC178X_LCD_DATA_FALL_EAGE |
                                     LPC178X_LCD_CLK_BYPASS),
          },              
          [1] = { /* mini2440 + 7" TFT + touchscreen */

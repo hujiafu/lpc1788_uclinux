@@ -317,7 +317,7 @@ static void lpc1788fb_calculate_tft_lcd_regs(struct fb_info *info)
 	fbi->regs.lcd_timv = 0;
 	fbi->regs.lcd_timv |= (var->upper_margin - 1) << 24;
 	fbi->regs.lcd_timv |= (var->lower_margin - 1) << 16;
-	fbi->regs.lcd_timv |= (var->vsync_len - 1) << 8;
+	fbi->regs.lcd_timv |= (var->vsync_len - 1) << 10;
 	fbi->regs.lcd_timv |= ((var->yres) - 1);
 	writel(fbi->regs.lcd_timv, regs + LPC178X_LCD_TIMV);
 	dprintk("REG_LCD_TIMV 0x%x\n", fbi->regs.lcd_timv);
@@ -332,7 +332,7 @@ static int lpc1788fb_calc_div(struct fb_info *info)
 
 	for(i=1; i<100; i++){
 		fbi->act_fre = fbi->clk_rate / i;
-		if((fbi->act_fre <= fbi->max_fre) && (fbi->act_fre >= fbi->min_fre)){
+		if((fbi->act_fre < fbi->max_fre) && (fbi->act_fre >= fbi->min_fre)){
 			fbi->div = i;
 			dprintk("%s: lcd dclk fre = %dHz\n", __func__, fbi->act_fre);
 			return 0;
@@ -529,6 +529,8 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
 	int ret;
 	int size;
 	int i;
+	unsigned short *start;
+	int mem_size = 0;
 	unsigned long lcdctrl;
 	volatile int delay;
 
@@ -681,6 +683,23 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
          goto free_cpufreq;
 		
 	}
+#if 0
+	start = fbinfo->fix.smem_start;
+	mem_size = 480 * 272;
+	for(i=0; i<mem_size; i++){
+		*start = 0x1f;
+		start++;
+	}
+#endif
+
+#if !defined(CONFIG_FRAMEBUFFER_CONSOLE) && defined(CONFIG_LOGO)
+                        if (fb_prepare_logo(fbinfo, 0)) {
+                                /* Start display and show logo on boot */
+                                //fb_set_cmap(&fbdev->fb_info.cmap,&fbdev->fb_info);
+
+                                fb_show_logo(fbinfo, 0);
+                        }    
+#endif
 
 	//ret = device_create_file(&pdev->dev, &dev_attr_debug);
          //if (ret) {
