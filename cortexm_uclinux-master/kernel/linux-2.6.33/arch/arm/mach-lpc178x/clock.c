@@ -252,7 +252,7 @@ static int lcd_clk_set_rate(struct clk *clk, unsigned long rate)
 unsigned long lcd_clk_get_rate(struct clk *clk)
 {
 	u32 tmp, div, rate;
-
+#if 0
 	/* The LCD clock must be on when accessing an LCD register */
 	tmp = __raw_readl(LPC178X_LCD_BASE + CLCD_TIM2);
 
@@ -264,6 +264,9 @@ unsigned long lcd_clk_get_rate(struct clk *clk)
 		div = (tmp & 0x1F) | ((tmp & 0xF8) >> 22);
 		rate /= (2 + div);
 	}
+#endif	
+	/* CPU clock is the source clock for the LCD controller */
+	rate = lpc178x_clock_get(CLOCK_CCLK);
 
 	return rate;
 }

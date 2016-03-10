@@ -16,8 +16,11 @@ struct lpc1788fb_info {
  
     unsigned long           clk_rate;
     unsigned int            palette_ready;
- 
- 
+    unsigned int            div;
+	unsigned long			max_fre;
+	unsigned long			min_fre;
+	unsigned long			act_fre;
+	unsigned int			frame_fre; 
     /* keep these registers in case we need to re-write palette */
     u32                     palette_buffer[256];
     u32                     pseudo_pal[16];

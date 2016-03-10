@@ -287,7 +287,7 @@ static void lpc1788fb_calculate_tft_lcd_regs(struct fb_info *info)
 		fbi->regs.lcd_ctrl &= ~LPC178X_LCD_FMT_MASK;
 		fbi->regs.lcd_ctrl |= LPC178X_LCD_16BPP_565;
 		writel(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);
-		dprintk("lcd_ctrl 0x%x\n", fbi->regs.lcd_ctrl);
+		dprintk("REG_LCD_CTRL 0x%x\n", fbi->regs.lcd_ctrl);
 
 		break;
 	default:
@@ -297,19 +297,22 @@ static void lpc1788fb_calculate_tft_lcd_regs(struct fb_info *info)
 	}
 
 	/* update X/Y info */
-	dprintk("setting vert: up=%d, low=%d, sync=%d\n",
-		var->upper_margin, var->lower_margin, var->vsync_len);
+	dprintk("setting vert: yres = %d, up=%d, low=%d, sync=%d\n",
+		var->yres, var->upper_margin, var->lower_margin, var->vsync_len);
 
-	dprintk("setting horz: lft=%d, rt=%d, sync=%d\n",
-		var->left_margin, var->right_margin, var->hsync_len);
+	dprintk("setting horz: xres = %d, lft=%d, rt=%d, sync=%d\n",
+		var->xres, var->left_margin, var->right_margin, var->hsync_len);
+
+	fbi->frame_fre = fbi->act_fre / ((var->xres + var->left_margin + var->right_margin + var->hsync_len) * (var->yres + var->upper_margin + var->lower_margin + var->vsync_len));
+	dprintk("frame fre = %dHz\n", fbi->frame_fre);
 
 	fbi->regs.lcd_timh = 0;
-	fbi->regs.lcd_timh |= (var->left_margin - 1) << 24;
-	fbi->regs.lcd_timh |= (var->right_margin - 1) << 16;
+	fbi->regs.lcd_timh |= (var->right_margin - 1) << 24;
+	fbi->regs.lcd_timh |= (var->left_margin - 1) << 16;
 	fbi->regs.lcd_timh |= (var->hsync_len - 1) << 8;
 	fbi->regs.lcd_timh |= ((var->xres)/16 - 1) << 2;
 	writel(fbi->regs.lcd_timh, regs + LPC178X_LCD_TIMH);
-	dprintk("lcd_timh 0x%x\n", fbi->regs.lcd_timh);
+	dprintk("REG_LCD_TIMH 0x%x\n", fbi->regs.lcd_timh);
 
 	fbi->regs.lcd_timv = 0;
 	fbi->regs.lcd_timv |= (var->upper_margin - 1) << 24;
@@ -317,23 +320,44 @@ static void lpc1788fb_calculate_tft_lcd_regs(struct fb_info *info)
 	fbi->regs.lcd_timv |= (var->vsync_len - 1) << 8;
 	fbi->regs.lcd_timv |= ((var->yres) - 1);
 	writel(fbi->regs.lcd_timv, regs + LPC178X_LCD_TIMV);
-	dprintk("lcd_timv 0x%x\n", fbi->regs.lcd_timv);
+	dprintk("REG_LCD_TIMV 0x%x\n", fbi->regs.lcd_timv);
 	
 }
 
 
+static int lpc1788fb_calc_div(struct fb_info *info)
+{
+	struct lpc1788fb_info *fbi = info->par;
+	int i;
 
+	for(i=1; i<100; i++){
+		fbi->act_fre = fbi->clk_rate / i;
+		if((fbi->act_fre <= fbi->max_fre) && (fbi->act_fre >= fbi->min_fre)){
+			fbi->div = i;
+			dprintk("%s: lcd dclk fre = %dHz\n", __func__, fbi->act_fre);
+			return 0;
+		}
+		if(fbi->act_fre < fbi->min_fre){
+			return -1;
+		}
+	}
+	return -1;
+}
 
-static void lpc1788fb_activate_var(struct fb_info *info)
+static int lpc1788fb_activate_var(struct fb_info *info)
 {
 	struct lpc1788fb_info *fbi = info->par;
 	void __iomem *regs = fbi->io;
 	int type = fbi->regs.lcd_ctrl & LPC178X_LCD_TFT;
 	struct fb_var_screeninfo *var = &info->var;
 	int clkdiv;
+	int ret = 0;
 	volatile int delay;
 
-	clkdiv = LPC178X_LCD_CLK_FRE / (var->pixclock);
+	ret = lpc1788fb_calc_div(info);
+	if(ret != 0){
+		return -1;
+	}
 
 	dprintk("%s: var->xres  = %d\n", __func__, var->xres);
 	dprintk("%s: var->yres  = %d\n", __func__, var->yres);
@@ -341,14 +365,15 @@ static void lpc1788fb_activate_var(struct fb_info *info)
 
 	if (type == LPC178X_LCD_TFT) {
 		lpc1788fb_calculate_tft_lcd_regs(info);
-		--clkdiv;
-		if (clkdiv < 0)
-			clkdiv = 0;
+		fbi->div -= 1;
+		if (fbi->div < 0)
+			fbi->div = 0;
 	} else {
 		printk("not LPC178X_LCD_TFT\n");
 	}
-
-	LPC178X_SCC->lcd_cfg = clkdiv;
+	
+	printk("fb clkdiv = %d\n", fbi->div);
+	LPC178X_SCC->lcd_cfg = fbi->div;
 
 	/* write new registers */
 
@@ -358,12 +383,12 @@ static void lpc1788fb_activate_var(struct fb_info *info)
 	fbi->regs.lcd_pol &= ~(LPC178X_LCD_CPL_MASK);
 	fbi->regs.lcd_pol |= (var->xres - 1)<<16;
 	writel(fbi->regs.lcd_pol, regs + LPC178X_LCD_POL);
-	dprintk("lcd_pol = 0x%x\n", fbi->regs.lcd_pol);
+	dprintk("REG_LCD_POL = 0x%x\n", fbi->regs.lcd_pol);
 
 	/* set lcd address pointers */
 	writel(info->fix.smem_start, regs + LPC178X_LCD_UPBASE);
 	writel(info->fix.smem_start, regs + LPC178X_LCD_LPBASE);
-	dprintk("lcd_upbase = 0x%x\n", info->fix.smem_start);
+	dprintk("REG_LCD_UPBASE = 0x%x\n", info->fix.smem_start);
 
 	/* enable lcd control */
 	//lcdctrl = readl(regs + LPC178X_LCD_CTRL);
@@ -372,13 +397,15 @@ static void lpc1788fb_activate_var(struct fb_info *info)
 	for(delay=0; delay<10000; delay++);
 	fbi->regs.lcd_ctrl |= (0x1<<11);
 	writel(fbi->regs.lcd_ctrl, regs + LPC178X_LCD_CTRL);	
-	dprintk("lcd_ctrl = 0x%x\n", fbi->regs.lcd_ctrl);
+	dprintk("REG_LCD_CTRL = 0x%x\n", fbi->regs.lcd_ctrl);
 	
+	return 0;
 }
 
 static int lpc1788fb_set_par(struct fb_info *info)
 {
 	struct fb_var_screeninfo *var = &info->var;
+	int ret = 0;
 
 	switch (var->bits_per_pixel) {
 	case 32:
@@ -401,8 +428,8 @@ static int lpc1788fb_set_par(struct fb_info *info)
 	dprintk("line_length = %d\n", info->fix.line_length);
 	/* activate this new configuration */
 
-	lpc1788fb_activate_var(info);
-	return 0;
+	ret = lpc1788fb_activate_var(info);
+	return ret;
 }
 
 
@@ -466,7 +493,7 @@ static int lpc1788fb_init_registers(struct fb_info *info)
 	fbi->regs.crsr_ctrl  = 0;
 	
 	writel(fbi->regs.crsr_ctrl, regs + LPC178X_LCD_CRSR_CTRL);	
-	dprintk("crsr_ctrl = 0x%x\n", fbi->regs.crsr_ctrl);
+	dprintk("REG_CRSR_CTRL = 0x%x\n", fbi->regs.crsr_ctrl);
 
 }
 
@@ -568,6 +595,7 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
         }
 
 	clk_enable(info->clk); //enable LCD POWER
+
 	msleep(1);
 	
 	info->irq_base = info->io;
@@ -578,7 +606,11 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
 	//lcdctrl = readl(info->io + LPC178X_LCD_CTRL);
 	info->regs.lcd_ctrl = display->lcdctrl;
 	info->regs.lcd_pol = display->lcdpol;
-    lpc1788fb_lcd_enable(info, 0);
+
+	info->max_fre = display->max_fre;
+	info->min_fre = display->min_fre;
+    //disable lcd controler.
+	lpc1788fb_lcd_enable(info, 0);
 
 	fbinfo->fix.type            = FB_TYPE_PACKED_PIXELS;
 	fbinfo->fix.type_aux        = 0;
@@ -608,6 +640,7 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
 #endif
 	info->clk_rate = clk_get_rate(info->clk);
 
+	printk("fb info->clk_rate = %d\n", info->clk_rate);
 	        /* find maximum required memory size for display */
         for (i = 0; i < mach_info->num_displays; i++) {
                 unsigned long smem_len = mach_info->displays[i].xres;
@@ -642,7 +675,12 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
                 goto free_cpufreq;
         }
 
-	lpc1788fb_set_par(fbinfo);
+	ret = lpc1788fb_set_par(fbinfo);
+	if(ret < 0){
+        printk(KERN_ERR "Failed to lpc1788fb_set_par: %d\n", ret);
+         goto free_cpufreq;
+		
+	}
 
 	//ret = device_create_file(&pdev->dev, &dev_attr_debug);
          //if (ret) {

@@ -104,6 +104,8 @@ struct lpc1788fb_display {
 	unsigned short bpp;
 
 	unsigned pixclock;		/* pixclock in picoseconds */
+	unsigned long max_fre;
+	unsigned long min_fre;
 	unsigned short left_margin;  /* value in pixels (TFT) or HCLKs (STN) */
 	unsigned short right_margin; /* value in pixels (TFT) or HCLKs (STN) */
 	unsigned short hsync_len;    /* value in pixels (TFT) or HCLKs (STN) */
