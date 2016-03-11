@@ -42,6 +42,8 @@
 
 
 #define LPC178X_LCD_TFT		(0x1<<5)
+#define LPC178X_LCD_RGB_SWAP	(0x1<<8)
+#define LPC178X_LCD_RGB_BEBO	(0x1<<9)
 #define LPC178X_LCD_16BPP_565	(0x6<<1)
 #define LPC178X_LCD_FMT_MASK	(0x7<<1)
 

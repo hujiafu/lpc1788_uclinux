@@ -81,7 +81,7 @@ static struct lpc1788fb_display lpc1788_lcd_cfg[] __initdata = {
                          60),                    /* refresh rate */
 				 .max_fre		= 9000000,
 				 .min_fre		= 5000000,	 
-				 .lcdctrl		= (LPC178X_LCD_TFT | LPC178X_LCD_16BPP_565),
+				 .lcdctrl		= (LPC178X_LCD_TFT | LPC178X_LCD_16BPP_565 | LPC178X_LCD_RGB_SWAP),
                  .lcdpol        = (LPC178X_LCD_FP_LOW |
                                     LPC178X_LCD_LP_LOW |
                                     //LPC178X_LCD_DATA_FALL_EAGE |

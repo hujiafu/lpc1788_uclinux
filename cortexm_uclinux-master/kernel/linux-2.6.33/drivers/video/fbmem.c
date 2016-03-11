@@ -611,7 +611,7 @@ int fb_prepare_logo(struct fb_info *info, int rotate)
 	else
 		fb_logo.depth = 1;
 
-
+	printk("fb_logo.depth = %d, depth = %d\n", fb_logo.depth, depth);
  	if (fb_logo.depth > 4 && depth > 4) {
  		switch (info->fix.visual) {
  		case FB_VISUAL_TRUECOLOR:

@@ -54,8 +54,8 @@ static int lpc1788fb_setcolreg(unsigned regno,
         void __iomem *regs = fbi->io;
         unsigned int val;
 
-        /* dprintk("setcol: regno=%d, rgb=%d,%d,%d\n",
-                   regno, red, green, blue); */
+        dprintk("setcol: regno=%d, rgb=%d,%d,%d\n",
+                   regno, red, green, blue);
  
         switch (info->fix.visual) {
         case FB_VISUAL_TRUECOLOR:
@@ -98,8 +98,10 @@ static int lpc1788fb_setcolreg(unsigned regno,
 static void lpc1788fb_lcd_enable(struct lpc1788fb_info *info, int enable)
 {
         unsigned long flags;
-	unsigned long lcdctrl;
-	volatile int delay;
+		unsigned long lcdctrl;
+		volatile int delay;
+
+		dprintk("lpc1788fb_lcd_enable\n");
 
         local_irq_save(flags);
 
@@ -411,6 +413,8 @@ static int lpc1788fb_set_par(struct fb_info *info)
 	case 32:
 	case 16:
 	case 12:
+		//info->fix.visual = FB_VISUAL_PSEUDOCOLOR;
+		//dprintk("FB_VISUAL_PSEUDCOLOR\n");
 		info->fix.visual = FB_VISUAL_TRUECOLOR;
 		dprintk("FB_VISUAL_TRUECOLOR\n");
 		break;
@@ -628,10 +632,11 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
 	
 	fbinfo->fbops               = &lpc1788fb_ops;
 	fbinfo->flags               = FBINFO_FLAG_DEFAULT;
-	fbinfo->pseudo_palette      = &info->pseudo_pal;	
+	//fbinfo->pseudo_palette      = &info->pseudo_pal;	
+	fbinfo->pseudo_palette      = NULL;	
 
-	for (i = 0; i < 256; i++)
-		info->palette_buffer[i] = PALETTE_BUFF_CLEAR;
+	//for (i = 0; i < 256; i++)
+	//	info->palette_buffer[i] = PALETTE_BUFF_CLEAR;
 #if 0
         ret = request_irq(irq, lpc1788fb_irq, IRQF_DISABLED, pdev->name, info);
         if (ret) {
@@ -683,14 +688,6 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
          goto free_cpufreq;
 		
 	}
-#if 0
-	start = fbinfo->fix.smem_start;
-	mem_size = 480 * 272;
-	for(i=0; i<mem_size; i++){
-		*start = 0x1f;
-		start++;
-	}
-#endif
 
 #if !defined(CONFIG_FRAMEBUFFER_CONSOLE) && defined(CONFIG_LOGO)
                         if (fb_prepare_logo(fbinfo, 0)) {
@@ -699,6 +696,29 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
 
                                 fb_show_logo(fbinfo, 0);
                         }    
+#endif
+
+#if 0
+	start = fbinfo->fix.smem_start;
+	mem_size = 480 * 90;
+	for(i=0; i<mem_size; i++){
+		*start = 0x1f;
+		start++;
+	}
+
+	start = fbinfo->fix.smem_start + mem_size * 2;
+	mem_size = 480 * 90;
+	for(i=0; i<mem_size; i++){
+		*start = 0x7E0;
+		start++;
+	}
+	
+	start = fbinfo->fix.smem_start + mem_size * 4;
+	mem_size = 480 * 90;
+	for(i=0; i<mem_size; i++){
+		*start = 0xF800;
+		start++;
+	}
 #endif
 
 	//ret = device_create_file(&pdev->dev, &dev_attr_debug);
