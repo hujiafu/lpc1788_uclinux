@@ -13,6 +13,7 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/cpufreq.h>
+#include <linux/my_linux_logo.h>
  
 #include <asm/io.h>
 #include <asm/div64.h>
@@ -532,8 +533,8 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
 	int irq;
 	int ret;
 	int size;
-	int i;
-	unsigned short *start;
+	int i, j;
+	unsigned short *start, *pLogo;
 	int mem_size = 0;
 	unsigned long lcdctrl;
 	volatile int delay;
@@ -689,6 +690,7 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
 		
 	}
 
+#if 1
 #if !defined(CONFIG_FRAMEBUFFER_CONSOLE) && defined(CONFIG_LOGO)
                         if (fb_prepare_logo(fbinfo, 0)) {
                                 /* Start display and show logo on boot */
@@ -697,7 +699,24 @@ static int __init lpc1788fb_probe(struct platform_device *pdev)
                                 fb_show_logo(fbinfo, 0);
                         }    
 #endif
-
+#endif
+#if 0	
+	start = fbinfo->fix.smem_start;
+	mem_size = 480 * 272;
+	for(i=0; i<mem_size; i++){
+		*start = 0xffff;
+		start++;
+	}
+	
+	start = fbinfo->fix.smem_start;
+	pLogo = gImage_logo;
+	for(i=0; i<200; i++){
+		for(j=0; j<170; j++){
+			*start++ = *pLogo++;
+		}
+		start = fbinfo->fix.smem_start + 480 * 2 * (i+1);
+	}
+#endif
 #if 0
 	start = fbinfo->fix.smem_start;
 	mem_size = 480 * 90;
