@@ -11,6 +11,21 @@ config MACH_LPC178X
 menu "LPC178x/7x I/O interfaces"
 	depends on ARCH_LPC178X
 
+config LCD_43_TFT
+	depends on ARCH_LPC178X && FB_ARMCLCD
+	bool "Enable for 4.3 TFT"
+	default n
+
+config LCD_5_TFT
+	depends on ARCH_LPC178X && FB_ARMCLCD
+	bool "Enable for 5 TFT"
+	default n
+
+config LCD_102_TFT
+	depends on ARCH_LPC178X && FB_ARMCLCD
+	bool "Enable for 10.2 TFT"
+	default n
+
 config LPC178X_TOUCH0
 	depends on ARCH_LPC178X && TOUCHSCREEN_TSC2046
 	bool "Enable LPC178x/7x SPI0 port"

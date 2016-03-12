@@ -46,11 +46,18 @@
  * This is so because these variables are mistakenly swapped
  * in `clcdfb_decode()` in `include/linux/amba/clcd.h`.
  */
-#define CONFIG_LCD_INDEX0
-#ifdef CONFIG_LCD_INDEX0
+
+#if defined(CONFIG_LCD_43_TFT)
 int	lcd_index = 0;
 #endif
 
+#if defined(CONFIG_LCD_5_TFT)
+int	lcd_index = 1;
+#endif
+
+#if defined(CONFIG_LCD_102_TFT)
+int	lcd_index = 2;
+#endif
 
 #define _LCD_DECLARE(_clock,_xres,margin_left,margin_right,hsync, \
                          _yres,margin_top,margin_bottom,vsync, refresh) \
@@ -73,9 +80,9 @@ int	lcd_index = 0;
                             LPC178X_LCD_16BPP_565)
 
 static struct lpc1788fb_display lpc1788_lcd_cfg[] __initdata = {
-         [0] = { /* mini2440 + 3.5" TFT + touchscreen */
+         [0] = { /* 4.3" TFT + touchscreen */
                  _LCD_DECLARE(
-                         7,                      /* The 3.5 is quite fast */
+                         7,                      /* The 4.3 is quite fast */
                          480, 40, 45, 1,         /* x timing */
                          272, 10, 20, 1,           /* y timing */
                          60),                    /* refresh rate */
@@ -87,29 +94,33 @@ static struct lpc1788fb_display lpc1788_lcd_cfg[] __initdata = {
                                     //LPC178X_LCD_DATA_FALL_EAGE |
                                     LPC178X_LCD_CLK_BYPASS),
          },              
-         [1] = { /* mini2440 + 7" TFT + touchscreen */
+         [1] = { /* 5" TFT + touchscreen */
                  _LCD_DECLARE(      
                          10,                     /* the 7" runs slower */
-                         800, 40, 40, 48,        /* x timing */
-                         480, 29, 3, 3,          /* y timing */
+                         800, 210, 46, 2,        /* x timing */
+                         480, 22, 23, 2,          /* y timing */
                          50),                    /* refresh rate */
-				 .lcdctrl		= (LPC178X_LCD_TFT | LPC178X_LCD_16BPP_565),
+				 .max_fre		= 46800000,
+				 .min_fre		= 26400000,	 
+				 .lcdctrl		= (LPC178X_LCD_TFT | LPC178X_LCD_16BPP_565 | LPC178X_LCD_RGB_SWAP),
                  .lcdpol        = (LPC178X_LCD_FP_LOW |
                                     LPC178X_LCD_LP_LOW |
                                     LPC178X_LCD_DATA_FALL_EAGE |
                                     LPC178X_LCD_CLK_BYPASS),
          },
-         [2] = {
+         [2] = { /* 10.2 TFT + touchscreen*/
                  _LCD_DECLARE(
                          10,
-                         1024, 1, 2, 2,          /* y timing */
-                         768, 200, 16, 16,       /* x timing */
+                         800, 210, 46, 2,          /* y timing */
+                         480, 11, 34, 2,       /* x timing */
                          24),    /* refresh rate, maximum stable,
                                   tested with the FPGA shield */
+				 .max_fre		= 40000000,
+				 .min_fre		= 32500000,	 
 				 .lcdctrl		= (LPC178X_LCD_TFT | LPC178X_LCD_16BPP_565),
                  .lcdpol        = (LPC178X_LCD_FP_LOW |
                                     LPC178X_LCD_LP_LOW |
-                                    LPC178X_LCD_DATA_FALL_EAGE |
+                                    //LPC178X_LCD_DATA_FALL_EAGE |
                                     LPC178X_LCD_CLK_BYPASS),
          },
 };
