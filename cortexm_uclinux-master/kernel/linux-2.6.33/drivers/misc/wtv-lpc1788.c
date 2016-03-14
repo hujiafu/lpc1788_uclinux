@@ -18,141 +18,80 @@
 #include <linux/io.h>
 #include <linux/sched.h>
 #include <mach/touch.h>
+#include <mach/wtv.h>
 #include <asm/irq.h>
 
 
-#define BTN_DEBOUNCE_DELAY   (20 * 1000000)   /* ns delay before the first sample */
-
-
-#define LPC178X_INT_STATUS	0x0	
-#define LPC178X_INT_STATR0	0x4	
-#define LPC178X_INT_STATF0	0x8	
-#define LPC178X_INT_CLR0	0xC	
-#define LPC178X_INT_ENR0	0x10	
-#define LPC178X_INT_ENF0	0x14
-#define LPC178X_INT_STATR2	0x24	
-#define LPC178X_INT_STATF2	0x28	
-#define LPC178X_INT_CLR2	0x2C	
-#define LPC178X_INT_ENR2	0x30	
-#define LPC178X_INT_ENF2	0x34
-
-#define LPC178X_GPIO_RISING	0x1
-#define LPC178X_GPIO_FALLING 0x2
-
-#define BTN_0_PIN	LPC178X_GPIO_MKPIN(0,1)
-#define BTN_1_PIN	LPC178X_GPIO_MKPIN(2,4)
-#define RFID_0_PIN	LPC178X_GPIO_MKPIN(2,2)
-#define RFID_1_PIN	LPC178X_GPIO_MKPIN(2,3)
-
-#define BTN_0_MSK LPC178X_GPIO_FALLING 
-#define BTN_1_MSK LPC178X_GPIO_FALLING 
-#define RFID_0_MSK LPC178X_GPIO_FALLING 
-#define RFID_1_MSK LPC178X_GPIO_FALLING 
-
-#define BTN_NUM	4
-
 static struct  wtv_platform_data *wtv_pdata;
 
-static DECLARE_WAIT_QUEUE_HEAD(button_waitq);
-static volatile int ev_press = 0;
-static volatile int key_value[2];
-
-struct btn_lpc1788 {
-	unsigned int port;
-	unsigned int pin;
-	unsigned int pin_flag;
-	unsigned int pin_num;
-};
-
-static struct btn_lpc1788 btn_data[] = {
-	{
-		.port = LPC178X_GPIO_GETPORT(BTN_0_PIN),
-		.pin = LPC178X_GPIO_GETPIN(BTN_0_PIN),
-		.pin_flag = BTN_0_MSK,
-		.pin_num = BTN_0_PIN,
-	},
-	{
-		.port = LPC178X_GPIO_GETPORT(BTN_1_PIN),
-		.pin = LPC178X_GPIO_GETPIN(BTN_1_PIN),
-		.pin_flag = BTN_1_MSK,
-		.pin_num = BTN_1_PIN,
-	},
-	{
-		.port = LPC178X_GPIO_GETPORT(RFID_0_PIN),
-		.pin = LPC178X_GPIO_GETPIN(RFID_0_PIN),
-		.pin_flag = RFID_0_MSK,
-		.pin_num = RFID_0_PIN,
-	},
-	{
-		.port = LPC178X_GPIO_GETPORT(RFID_1_PIN),
-		.pin = LPC178X_GPIO_GETPIN(RFID_1_PIN),
-		.pin_flag = RFID_1_MSK,
-		.pin_num = RFID_1_PIN,
-	},
-};
 /*
  * Driver verbosity level: 0->silent; >0->verbose (1 to 4, growing verbosity)
  */
-static int btn_lpc1788_debug = 4;
+static int wtv_lpc1788_debug = 4;
 
-#define BTN_LPC1788_DEBUG 1
+#define WTV_LPC1788_DEBUG 1
 
-#if defined(BTN_LPC1788_DEBUG)
+#if defined(WTV_LPC1788_DEBUG)
 
-#define btn_printk(level, fmt, args...)					\
-	if (btn_lpc1788_debug >= level) printk(KERN_INFO "%s: " fmt,	\
+#define wtv_printk(level, fmt, args...)					\
+	if (wtv_lpc1788_debug >= level) printk(KERN_INFO "%s: " fmt,	\
 				       	   __func__, ## args)
 
 #else
 
-#define btn_printk(level, fmt, args...)
+#define wtv_printk(level, fmt, args...)
 
 #endif
-
-struct lpc178x_gpio {
-
-	void __iomem		*reg_base;
-	int			irq;
-	int			status0;
-	int			status2;
-	spinlock_t              lock;
-	struct hrtimer          timer;
-};
-
 
 
 static int lpc178x_wtv_open(struct inode *inode, struct file *file)
 {
-	file->private_data = my_client[minor];
 	return 0;
 }
 
-static int lpc178x_btn_close(struct inode *inode, struct file *file)
+static int lpc178x_wtv_close(struct inode *inode, struct file *file)
 {
 	return 0;
 }
 
-static int lpc178x_btn_read(struct file *file, char __user *buff, size_t count, loff_t *offset)
+static int lpc178x_wtv_write(struct file *file, const char __user *buff, size_t count, loff_t *offset)
 {
-	unsigned long err;
+	char data = *buff;
+	int i = 0;
 
-	if(!ev_press){
-		if(file->f_flags & O_NONBLOCK)
-			return -EAGAIN;
-		else
-			wait_event_interruptible(button_waitq, ev_press);
+	if(count != 1){
+		wtv_printk(1, "wtv only support 1 byte write\n");
+		return -EFAULT;
 	}
 
-	ev_press = 0;
+	gpio_set_value(wtv_pdata->cs, 0);
+	gpio_set_value(wtv_pdata->clock, 1);
 
-	err = copy_to_user(buff, (const void*)key_value, min(sizeof(key_value), count));
-	return err ? -EFAULT : min(sizeof(key_value), count);
+	mdelay(10);
+
+	for(i=0; i<8; i++){
+		gpio_set_value(wtv_pdata->clock, 0);
+		if(data & 0x1){
+			gpio_set_value(wtv_pdata->data, 1);
+		}else{
+			gpio_set_value(wtv_pdata->data, 0);
+		}
+		data = data >> 1;
+		udelay(100);
+		gpio_set_value(wtv_pdata->clock, 1);
+		udelay(100);
+	}
+	udelay(50);
+	gpio_set_value(wtv_pdata->cs, 1);
+
+	return 1;
 }
 
-static int lpc178x_btn_poll(struct file *file, struct poll_table_struct *wait)
+static int lpc178x_wtv_read(struct file *file, char __user *buff, size_t count, loff_t *offset)
 {
 	return 0;
 }
+
 
 static struct file_operations dev_fops = {
 	.owner = THIS_MODULE,
@@ -160,7 +99,6 @@ static struct file_operations dev_fops = {
 	.release = lpc178x_wtv_close,
 	.read = lpc178x_wtv_read,
 	.write = lpc178x_wtv_write,
-	.poll = lpc178x_wtv_poll,
 };
 
 static struct miscdevice misc = {
@@ -169,199 +107,44 @@ static struct miscdevice misc = {
 	.fops = &dev_fops,
 };
 
-static inline unsigned long btn_readl(void __iomem *reg)
-{
-	return __raw_readl(reg);
-}
 
-static inline void btn_writel(unsigned long val, void __iomem *reg)
-{
-	__raw_writel(val, reg);
-}
-
-static enum hrtimer_restart btn_timer(struct hrtimer *handle)
-{
-	struct lpc178x_gpio  *gpio = container_of(handle, struct lpc178x_gpio, timer);
-	int i = 0;
-	unsigned int data = 0;
-
-	spin_lock(&gpio->lock);
-	
-	for(i=0; i<BTN_NUM; i++){
-		if((btn_data[i].port) == 0){
-			data = !gpio_get_value(btn_data[i].pin_num);
-			if((data<<i) & gpio->status0){
-				//report key down
-				ev_press = 1;
-				if(BTN_NUM < 32){
-					key_value[0] |= 1<<i;
-				}
-				if(BTN_NUM >= 32){
-					key_value[1] |= 1<<i;
-				}
-			}else{
-				if(BTN_NUM < 32){
-					key_value[0] &= ~(1<<i);
-				}
-				if(BTN_NUM >= 32){
-					key_value[1] &= ~(1<<i);
-				}
-				gpio->status0 &= ~(1<<i);
-			}
-		}
-		if((btn_data[i].port) == 2){
-			data = !gpio_get_value(btn_data[i].pin_num);
-			if((data<<i) & gpio->status2){
-				ev_press = 1;
-				if(BTN_NUM < 32){
-					key_value[0] |= 1<<i;
-				}
-				if(BTN_NUM >= 32){
-					key_value[1] |= 1<<i;
-				}
-				//report key down
-			}else{
-				if(BTN_NUM < 32){
-					key_value[0] &= ~(1<<i);
-				}
-				if(BTN_NUM >= 32){
-					key_value[1] &= ~(1<<i);
-				}
-				gpio->status0 &= ~(1<<i);
-			}
-		}
-	}	
-
-	if(ev_press == 1){
-		wake_up_interruptible(&button_waitq);
-	}
-
-	spin_unlock(&gpio->lock);
-	return HRTIMER_NORESTART;
-
-}
-
-
-static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
-{
-	struct lpc178x_gpio *gpio = (struct lpc178x_gpio *) dev_id;
-	int i = 0;
-	int data = 0;
-
-		for(i=0; i<BTN_NUM; i++){ 
-			if((btn_data[i].port) == 0){
-				//port 0
-				if(btn_data[i].pin_flag & LPC178X_GPIO_FALLING){	
-					data = btn_readl(gpio->reg_base + LPC178X_INT_STATF0);
-					//TODO
-					if(data & (1<<btn_data[i].pin)){
-						//report key
-						gpio->status0 |= (1<<i);
-						btn_writel(1<<i, gpio->reg_base + LPC178X_INT_CLR0);
-					}
-				}	
-				if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){	
-					data = btn_readl(gpio->reg_base + LPC178X_INT_STATR0);
-					//TODO
-					if(data & (1<<btn_data[i].pin)){
-						gpio->status0 &= ~(1<<i);
-						btn_writel(data, gpio->reg_base + LPC178X_INT_CLR0);
-					}
-				}	
-			}	
-			if((btn_data[i].port) == 2){
-				//port 2
-				if(btn_data[i].pin_flag & LPC178X_GPIO_FALLING){	
-					data = btn_readl(gpio->reg_base + LPC178X_INT_STATF2);
-					//TODO
-					if(data & (1<<btn_data[i].pin)){
-						gpio->status2 |= (1<<i);
-						btn_writel(data, gpio->reg_base + LPC178X_INT_CLR2);
-					}
-				}	
-				if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){	
-					data = btn_readl(gpio->reg_base + LPC178X_INT_STATR2);
-					//TODO
-					if(data & (1<<btn_data[i].pin)){
-						gpio->status2 &= ~(1<<i);
-						btn_writel(data, gpio->reg_base + LPC178X_INT_CLR2);
-					}
-				}	
-			}	
-		}
-
-		if(gpio->status0 || gpio->status2){
-			hrtimer_start(&gpio->timer, ktime_set(0, BTN_DEBOUNCE_DELAY), HRTIMER_MODE_REL);
-
-		}
-		
-		return IRQ_HANDLED;
-
-}
-
-
-static __devinit button_probe(struct platform_device *pdev)
+static __devinit wtv_probe(struct platform_device *pdev)
 {
 	struct lpc178x_gpio *gpio;
 	struct resource *regs;
-	struct wtv_platform_data	*pdata = pdev->platform_data;
+	struct wtv_platform_data	*pdata = pdev->dev.platform_data;
 	int ret = 0;
 	int i = 0;
 
 
 	wtv_pdata = pdata;
 	if(wtv_pdata == NULL){
-		wtv_printk(1, "Error get platform data\n")
+		wtv_printk(1, "Error get platform data\n");
 		ret = -EINVAL;
 		goto Error_release_nothing;
 	}
 
 	wtv_printk(1, "cs pin = p(%d, %d)\n", LPC178X_GPIO_GETPORT(wtv_pdata->cs), LPC178X_GPIO_GETPIN(wtv_pdata->cs));
-
-
+	wtv_printk(1, "reset pin = p(%d, %d)\n", LPC178X_GPIO_GETPORT(wtv_pdata->reset), LPC178X_GPIO_GETPIN(wtv_pdata->reset));
+	wtv_printk(1, "clock pin = p(%d, %d)\n", LPC178X_GPIO_GETPORT(wtv_pdata->clock), LPC178X_GPIO_GETPIN(wtv_pdata->clock));
+	wtv_printk(1, "data pin = p(%d, %d)\n", LPC178X_GPIO_GETPORT(wtv_pdata->data), LPC178X_GPIO_GETPIN(wtv_pdata->data));
 
 	platform_set_drvdata(pdev, gpio);
 
-	//ret = request_irq(gpio->irq, btn_lpc1788_handler, IRQF_DISABLED | IRQF_SHARED, "lpc178x-gpio", gpio);
-	ret = request_irq(gpio->irq, btn_lpc1788_handler, IRQF_DISABLED, "lpc178x-gpio", gpio);
-	if (ret){
-		btn_printk(1, "request irq failed\n");
-		goto Error_release_nothing;
-	}
+	gpio_direction_output(pdata->cs, 1);
+	gpio_direction_output(pdata->reset, 1);
+	gpio_direction_output(pdata->clock, 0);
+	gpio_direction_output(pdata->data, 0);
+
 
 	ret = misc_register(&misc);
 	if (ret){
-		btn_printk(1, "misc_register failed\n");
+		wtv_printk(1, "misc_register failed\n");
 		goto Error_release_nothing;
 	}
 
-#if 0
-	for(i=0; i<BTN_NUM; i++){
-		if((btn_data[i].port) == 0){
-			if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){
-				btn_writel(1<<i, gpio->reg_base + LPC178X_INT_ENR0);
-			}
-			if(btn_data[i].pin_flag & LPC178X_GPIO_FALLING){
-				btn_writel(1<<i, gpio->reg_base + LPC178X_INT_ENF0);
-			}
-		}
-		if((btn_data[i].port) == 2){
-			if(btn_data[i].pin_flag & LPC178X_GPIO_RISING){
-				btn_writel(1<<i, gpio->reg_base + LPC178X_INT_ENR2);
-			}
-			if(btn_data[i].pin_flag & LPC178X_GPIO_FALLING){
-				btn_writel(1<<i, gpio->reg_base + LPC178X_INT_ENF2);
-			}
-		}
-	}
-#endif
-
-	hrtimer_init(&gpio->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	gpio->timer.function = btn_timer;
-
-	spin_lock_init(&gpio->lock);
 	
-	btn_printk(1, "key probe successful\n");
+	wtv_printk(1, "wtv probe successful\n");
 	return 0;
 
 Error_release_nothing:

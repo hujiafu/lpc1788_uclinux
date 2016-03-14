@@ -23,3 +23,4 @@ obj-$(CONFIG_LEDS_PCA9532)	+= ea-lpc1788-pca9532.o
 obj-$(CONFIG_GPIOLIB)		+= gpio.o
 obj-$(CONFIG_RTC_DRV_LPC178X)	+= rtc.o
 obj-$(CONFIG_LPC2K_WATCHDOG)	+= wdt.o
+obj-$(CONFIG_LPC178X_WTV)	+= wtv.o

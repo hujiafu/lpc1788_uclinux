@@ -47,6 +47,7 @@
 #include <mach/fb.h>
 #include <mach/rtc.h>
 #include <mach/wdt.h>
+#include <mach/wtv.h>
 
 #if defined(CONFIG_GPIOLIB)
 #include <mach/i2c-gpio.h>
@@ -320,5 +321,8 @@ static void __init lpc178x_init(void)
 	lpc178x_bl_init();
 #endif	
 
+#if defined(CONFIG_LPC178X_WTV)
+	lpc178x_wtv_init();
+#endif	
 }
 

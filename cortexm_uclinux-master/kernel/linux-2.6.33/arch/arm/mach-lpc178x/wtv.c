@@ -18,8 +18,10 @@ static struct wtv_platform_data wtv_pldata = {
 
 struct platform_device lpc178x_wtv_device = {			
 	.name           = "lpc178x-wtv",					
-	.id             = 0,						
-	.platform_data  = &wtv_pldata,
+	.id             = 0,
+	.dev			= {
+		.platform_data  = &wtv_pldata,
+	}
 };
 
 

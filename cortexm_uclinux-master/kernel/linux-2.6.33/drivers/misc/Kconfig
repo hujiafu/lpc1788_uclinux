@@ -272,6 +272,13 @@ config EP93XX_PWM
 	  To compile this driver as a module, choose M here: the module will
 	  be called ep93xx_pwm.
 
+config LPC178X_WTV
+	tristate "LPC178X WTV support"
+	depends on ARCH_LPC178X
+	default n
+	---help---
+	This option support lpc178x wtv driver.
+
 config DS1682
 	tristate "Dallas DS1682 Total Elapsed Time Recorder with Alarm"
 	depends on I2C && EXPERIMENTAL
