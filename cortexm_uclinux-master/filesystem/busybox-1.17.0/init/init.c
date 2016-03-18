@@ -871,7 +871,6 @@ int init_main(int argc UNUSED_PARAM, char **argv)
 	putenv((char *) bb_PATH_root_path);
 	putenv((char *) "SHELL=/bin/sh");
 	putenv((char *) "USER=root"); /* needed? why? */
-	putenv((char *) "TSLIB_CONFFILE=/etc/ts.conf"); /* ts.conf */
 
 	if (argv[1])
 		xsetenv("RUNLEVEL", argv[1]);

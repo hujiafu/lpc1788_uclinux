@@ -1,0 +1,11 @@
+#!/bin/sbin
+
+echo "make the busybox....."
+
+make ARCH=arm CROSS_COMPILE=arm-uclinuxeabi- CFLAGS="-march=armv7-m -mthumb -Wl,-elf2flt=-s -Wl,-elf2flt=16384" distclean
+#cp uclinux_config .config
+cp uclinux_config_bak .config
+make ARCH=arm CROSS_COMPILE=arm-uclinuxeabi- CFLAGS="-march=armv7-m -mthumb -Wl,-elf2flt=-s -Wl,-elf2flt=16384" SKIP_STRIP=y
+make ARCH=arm CROSS_COMPILE=arm-uclinuxeabi- CFLAGS="-march=armv7-m -mthumb -Wl,-elf2flt=-s -Wl,-elf2flt=16384" install
+
+
