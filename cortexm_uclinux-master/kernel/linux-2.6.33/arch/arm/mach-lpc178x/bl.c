@@ -16,6 +16,7 @@ static struct platform_pwm_backlight_data lpc178x_backlight_data = {
 	.max_brightness = 100,
 	.dft_brightness = 80,
 	.pwm_period_ns	= 5000,
+	//.pwm_period_ns	= 3300000,
 	.init = lpc178x_backlight_init,
 };
 
