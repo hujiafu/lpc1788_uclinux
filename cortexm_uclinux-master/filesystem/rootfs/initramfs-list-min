@@ -59,8 +59,6 @@ slink /init /bin/init 777 0 0
 slink /bin/test fbtest 777 0 0
 file /etc/inittab ../../filesystem/rootfs/local/inittab 755 0 0
 file /etc/ts.conf ../../uclinux_app/ts.conf 755 0 0
-dir /etc/minigui 0755 0 0
-file /etc/minigui/MiniGUI.cfg ../../uclinux_app/minigui/MiniGUI.cfg 755 0 0
 
 file /etc/rc ../../filesystem/rootfs/local/rc 755 0 0
 file /etc/hosts ../../filesystem/rootfs/local/hosts 644 0 0
@@ -70,6 +68,79 @@ file /etc/passwd ../../filesystem/rootfs/local/passwd 644 0 0
 file /etc/group ../../filesystem/rootfs/local/group 644 0 0
 file /etc/shadow ../../filesystem/rootfs/local/shadow 644 0 0
 file /etc/securetty ../../filesystem/rootfs/local/securetty 644 0 0
+
+# MiniGUI
+dir /etc/minigui 0755 0 0
+dir /etc/minigui/res 0755 0 0
+dir /etc/minigui/res/bmp 0755 0 0
+dir /etc/minigui/res/cursor 0755 0 0
+dir /etc/minigui/res/front 0755 0 0
+dir /etc/minigui/res/icon 0755 0 0
+file /etc/minigui/MiniGUI.cfg ../../uclinux_app/minigui/MiniGUI.cfg 755 0 0
+file /etc/minigui/res/cursor/d_arrow.cur		../../uclinux_app/minigui/res/cursor/d_arrow.cur 755 0 0
+file /etc/minigui/res/cursor/d_beam.cur			../../uclinux_app/minigui/res/cursor/d_beam.cur 755 0 0
+file /etc/minigui/res/cursor/d_busy.cur			../../uclinux_app/minigui/res/cursor/d_busy.cur 755 0 0
+file /etc/minigui/res/cursor/d_cross.cur		../../uclinux_app/minigui/res/cursor/d_cross.cur 755 0 0
+file /etc/minigui/res/cursor/d_help.cur			../../uclinux_app/minigui/res/cursor/d_help.cur 755 0 0
+file /etc/minigui/res/cursor/d_move.cur			../../uclinux_app/minigui/res/cursor/d_move.cur 755 0 0
+file /etc/minigui/res/cursor/d_none.cur			../../uclinux_app/minigui/res/cursor/d_none.cur 755 0 0
+file /etc/minigui/res/cursor/d_pencil.cur		../../uclinux_app/minigui/res/cursor/d_pencil.cur 755 0 0
+file /etc/minigui/res/cursor/d_sizenesw.cur		../../uclinux_app/minigui/res/cursor/d_sizenesw.cur 755 0 0
+file /etc/minigui/res/cursor/d_sizens.cur		../../uclinux_app/minigui/res/cursor/d_sizens.cur 755 0 0
+file /etc/minigui/res/cursor/d_sizenwse.cur		../../uclinux_app/minigui/res/cursor/d_sizenwse.cur 755 0 0
+file /etc/minigui/res/cursor/d_sizewe.cur		../../uclinux_app/minigui/res/cursor/d_sizewe.cur 755 0 0
+file /etc/minigui/res/cursor/d_uparrow.cur		../../uclinux_app/minigui/res/cursor/d_uparrow.cur 755 0 0
+file /etc/minigui/res/cursor/d_wait.cur			../../uclinux_app/minigui/res/cursor/d_wait.cur 755 0 0
+file /etc/minigui/res/cursor/g_arrow.cur		../../uclinux_app/minigui/res/cursor/g_arrow.cur 755 0 0
+file /etc/minigui/res/cursor/g_col.cur			../../uclinux_app/minigui/res/cursor/g_col.cur 755 0 0
+file /etc/minigui/res/cursor/g_drag.cur			../../uclinux_app/minigui/res/cursor/g_drag.cur 755 0 0
+file /etc/minigui/res/cursor/g_help.cur			../../uclinux_app/minigui/res/cursor/g_help.cur 755 0 0
+file /etc/minigui/res/cursor/g_maginify.cur		../../uclinux_app/minigui/res/cursor/g_maginify.cur 755 0 0
+file /etc/minigui/res/cursor/g_move.cur			../../uclinux_app/minigui/res/cursor/g_move.cur 755 0 0
+file /etc/minigui/res/cursor/g_nodrop.cur		../../uclinux_app/minigui/res/cursor/g_nodrop.cur 755 0 0
+file /etc/minigui/res/cursor/g_pencil.cur		../../uclinux_app/minigui/res/cursor/g_pencil.cur 755 0 0
+file /etc/minigui/res/cursor/g_rarrow.cur		../../uclinux_app/minigui/res/cursor/g_rarrow.cur 755 0 0
+file /etc/minigui/res/cursor/g_row.cur			../../uclinux_app/minigui/res/cursor/g_row.cur 755 0 0
+file /etc/minigui/res/cursor/g_sizenesw.cur		../../uclinux_app/minigui/res/cursor/g_sizenesw.cur 755 0 0
+file /etc/minigui/res/cursor/g_sizens.cur		../../uclinux_app/minigui/res/cursor/g_sizens.cur 755 0 0
+file /etc/minigui/res/cursor/g_sizenwse.cur		../../uclinux_app/minigui/res/cursor/g_sizenwse.cur 755 0 0
+file /etc/minigui/res/cursor/g_sizewe.cur		../../uclinux_app/minigui/res/cursor/g_sizewe.cur 755 0 0
+file /etc/minigui/res/cursor/h_cross.cur		../../uclinux_app/minigui/res/cursor/h_cross.cur 755 0 0
+file /etc/minigui/res/cursor/h_ibeam.cur		../../uclinux_app/minigui/res/cursor/h_ibeam.cur 755 0 0
+file /etc/minigui/res/cursor/h_move.cur			../../uclinux_app/minigui/res/cursor/h_move.cur 755 0 0
+file /etc/minigui/res/cursor/h_ne.cur			../../uclinux_app/minigui/res/cursor/h_ne.cur 755 0 0
+file /etc/minigui/res/cursor/h_nodrop.cur		../../uclinux_app/minigui/res/cursor/h_nodrop.cur 755 0 0
+file /etc/minigui/res/cursor/h_ns.cur			../../uclinux_app/minigui/res/cursor/h_ns.cur 755 0 0
+file /etc/minigui/res/cursor/h_nw.cur			../../uclinux_app/minigui/res/cursor/h_nw.cur 755 0 0
+file /etc/minigui/res/cursor/ho_line.cur		../../uclinux_app/minigui/res/cursor/ho_line.cur 755 0 0
+file /etc/minigui/res/cursor/ho_sizeb.cur		../../uclinux_app/minigui/res/cursor/ho_sizeb.cur 755 0 0
+file /etc/minigui/res/cursor/ho_split.cur		../../uclinux_app/minigui/res/cursor/ho_split.cur 755 0 0
+file /etc/minigui/res/cursor/h_point.cur		../../uclinux_app/minigui/res/cursor/h_point.cur 755 0 0
+file /etc/minigui/res/cursor/h_select.cur		../../uclinux_app/minigui/res/cursor/h_select.cur 755 0 0
+file /etc/minigui/res/cursor/h_we.cur			../../uclinux_app/minigui/res/cursor/h_we.cur 755 0 0
+file /etc/minigui/res/cursor/ve_line.cur		../../uclinux_app/minigui/res/cursor/ve_line.cur 755 0 0
+file /etc/minigui/res/cursor/ve_sizeb.cur		../../uclinux_app/minigui/res/cursor/ve_sizeb.cur 755 0 0
+file /etc/minigui/res/cursor/ve_split.cur		../../uclinux_app/minigui/res/cursor/ve_split.cur 755 0 0
+
+file /etc/minigui/res/icon/excalmatory-flat.ico		../../uclinux_app/minigui/res/icon/excalmatory-flat.ico 755 0 0
+file /etc/minigui/res/icon/excalmatory.ico			../../uclinux_app/minigui/res/icon/excalmatory.ico 755 0 0
+file /etc/minigui/res/icon/failed-flat.ico			../../uclinux_app/minigui/res/icon/failed-flat.ico 755 0 0
+file /etc/minigui/res/icon/failed.ico				../../uclinux_app/minigui/res/icon/failed.ico 755 0 0
+file /etc/minigui/res/icon/folder-flat.ico			../../uclinux_app/minigui/res/icon/folder-flat.ico 755 0 0
+file /etc/minigui/res/icon/folder.ico				../../uclinux_app/minigui/res/icon/folder.ico 755 0 0
+file /etc/minigui/res/icon/fold-flat.ico			../../uclinux_app/minigui/res/icon/fold-flat.ico 755 0 0
+file /etc/minigui/res/icon/fold.ico					../../uclinux_app/minigui/res/icon/fold.ico 755 0 0
+file /etc/minigui/res/icon/form-flat.ico			../../uclinux_app/minigui/res/icon/form-flat.ico 755 0 0
+file /etc/minigui/res/icon/form.ico					../../uclinux_app/minigui/res/icon/form.ico 755 0 0
+file /etc/minigui/res/icon/help-flat.ico			../../uclinux_app/minigui/res/icon/help-flat.ico 755 0 0
+file /etc/minigui/res/icon/help.ico					../../uclinux_app/minigui/res/icon/help.ico 755 0 0
+file /etc/minigui/res/icon/textfile-flat.ico		../../uclinux_app/minigui/res/icon/textfile-flat.ico 755 0 0
+file /etc/minigui/res/icon/textfile.ico				../../uclinux_app/minigui/res/icon/textfile.ico 755 0 0
+file /etc/minigui/res/icon/unfold-flat.ico			../../uclinux_app/minigui/res/icon/unfold-flat.ico 755 0 0
+file /etc/minigui/res/icon/unfold.ico				../../uclinux_app/minigui/res/icon/unfold.ico 755 0 0
+file /etc/minigui/res/icon/warning-flat.ico			../../uclinux_app/minigui/res/icon/warning-flat.ico 755 0 0
+file /etc/minigui/res/icon/warning.ico				../../uclinux_app/minigui/res/icon/warning.ico 755 0 0
+
 
 # Dropbear ssh server
 dir /etc/dropbear 0755 0 0
