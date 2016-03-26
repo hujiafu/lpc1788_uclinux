@@ -872,6 +872,7 @@ int init_main(int argc UNUSED_PARAM, char **argv)
 	putenv((char *) "SHELL=/bin/sh");
 	putenv((char *) "USER=root"); /* needed? why? */
 	putenv((char *) "TSLIB_CONFFILE=/etc/ts.conf"); /* ts.conf */
+	putenv((char *) "MG_CFG_PATH=/etc/minigui"); /* minigui cfg */
 
 	if (argv[1])
 		xsetenv("RUNLEVEL", argv[1]);
