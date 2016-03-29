@@ -74,7 +74,7 @@ dir /etc/minigui 0755 0 0
 dir /etc/minigui/res 0755 0 0
 dir /etc/minigui/res/bmp 0755 0 0
 dir /etc/minigui/res/cursor 0755 0 0
-dir /etc/minigui/res/front 0755 0 0
+dir /etc/minigui/res/font 0755 0 0
 dir /etc/minigui/res/icon 0755 0 0
 file /etc/minigui/MiniGUI.cfg ../../uclinux_app/minigui/MiniGUI.cfg 755 0 0
 file /etc/minigui/res/cursor/d_arrow.cur		../../uclinux_app/minigui/res/cursor/d_arrow.cur 755 0 0
@@ -141,41 +141,48 @@ file /etc/minigui/res/icon/unfold.ico				../../uclinux_app/minigui/res/icon/unfo
 file /etc/minigui/res/icon/warning-flat.ico			../../uclinux_app/minigui/res/icon/warning-flat.ico 755 0 0
 file /etc/minigui/res/icon/warning.ico				../../uclinux_app/minigui/res/icon/warning.ico 755 0 0
 
-dir /bmp 0755 0 0
-file /bmp/classic_check_button.bmp				../../uclinux_app/minigui/res/bmp/classic_check_button.bmp 755 0 0
-file /bmp/classic_radio_button.bmp				../../uclinux_app/minigui/res/bmp/classic_radio_button.bmp 755 0 0
-file /bmp/fashion_check_btn.bmp				../../uclinux_app/minigui/res/bmp/fashion_check_btn.bmp 755 0 0
-file /bmp/fashion_radio_btn.bmp				../../uclinux_app/minigui/res/bmp/fashion_radio_btn.bmp 755 0 0
-file /bmp/flat_check_button.bmp				../../uclinux_app/minigui/res/bmp/flat_check_button.bmp 755 0 0
-file /bmp/flat_radio_button.bmp				../../uclinux_app/minigui/res/bmp/flat_radio_button.bmp 755 0 0
-file /bmp/skin_arrows.gif				../../uclinux_app/minigui/res/bmp/skin_arrows.gif 755 0 0
-file /bmp/skin_arrows_shell.bmp				../../uclinux_app/minigui/res/bmp/skin_arrows_shell.bmp 755 0 0
-file /bmp/skin_bborder.bmp				../../uclinux_app/minigui/res/bmp/skin_bborder.bmp 755 0 0
-file /bmp/skin_bkgnd.bmp				../../uclinux_app/minigui/res/bmp/skin_bkgnd.bmp 755 0 0
-file /bmp/skin_caption.gif				../../uclinux_app/minigui/res/bmp/skin_caption.gif 755 0 0
-file /bmp/skin_checkbtn.bmp				../../uclinux_app/minigui/res/bmp/skin_checkbtn.bmp 755 0 0
-file /bmp/skin_cpn_btn.gif				../../uclinux_app/minigui/res/bmp/skin_cpn_btn.gif 755 0 0
-file /bmp/skin_header.bmp				../../uclinux_app/minigui/res/bmp/skin_header.bmp 755 0 0
-file /bmp/skin_lborder.bmp				../../uclinux_app/minigui/res/bmp/skin_lborder.bmp 755 0 0
-file /bmp/skin_pb_htrack.gif				../../uclinux_app/minigui/res/bmp/skin_pb_htrack.gif 755 0 0
-file /bmp/skin_pb_htruck.bmp				../../uclinux_app/minigui/res/bmp/skin_pb_htruck.bmp 755 0 0
-file /bmp/skin_pb_vtrack.gif				../../uclinux_app/minigui/res/bmp/skin_pb_vtrack.gif 755 0 0
-file /bmp/skin_pb_vtruck.bmp				../../uclinux_app/minigui/res/bmp/skin_pb_vtruck.bmp 755 0 0
-file /bmp/skin_pushbtn.gif				../../uclinux_app/minigui/res/bmp/skin_pushbtn.gif 755 0 0
-file /bmp/skin_radiobtn.gif				../../uclinux_app/minigui/res/bmp/skin_radiobtn.gif 755 0 0
-file /bmp/skin_rborder.bmp				../../uclinux_app/minigui/res/bmp/skin_rborder.bmp 755 0 0
-file /bmp/skin_sb_arrows.bmp				../../uclinux_app/minigui/res/bmp/skin_sb_arrows.bmp 755 0 0
-file /bmp/skin_sb_hshaft.bmp				../../uclinux_app/minigui/res/bmp/skin_sb_hshaft.bmp 755 0 0
-file /bmp/skin_sb_hthumb.bmp				../../uclinux_app/minigui/res/bmp/skin_sb_hthumb.bmp 755 0 0
-file /bmp/skin_sb_vshaft.bmp				../../uclinux_app/minigui/res/bmp/skin_sb_vshaft.bmp 755 0 0
-file /bmp/skin_sb_vthumb.bmp				../../uclinux_app/minigui/res/bmp/skin_sb_vthumb.bmp 755 0 0
-file /bmp/skin_tab.gif				../../uclinux_app/minigui/res/bmp/skin_tab.gif 755 0 0
-file /bmp/skin_tb_horz.gif				../../uclinux_app/minigui/res/bmp/skin_tb_horz.gif 755 0 0
-file /bmp/skin_tborder.bmp				../../uclinux_app/minigui/res/bmp/skin_tborder.bmp 755 0 0
-file /bmp/skin_tbslider_h.gif				../../uclinux_app/minigui/res/bmp/skin_tbslider_h.gif 755 0 0
-file /bmp/skin_tbslider_v.gif				../../uclinux_app/minigui/res/bmp/skin_tbslider_v.gif 755 0 0
-file /bmp/skin_tb_vert.gif				../../uclinux_app/minigui/res/bmp/skin_tb_vert.gif 755 0 0
-file /bmp/skin_tree.bmp				../../uclinux_app/minigui/res/bmp/skin_tree.bmp 755 0 0
+file /etc/minigui/res/font/song-12-gb2312.bin		../../uclinux_app/minigui/res/font/song-12-gb2312.bin 755 0 0
+file /etc/minigui/res/font/song-16-gb2312.bin		../../uclinux_app/minigui/res/font/song-16-gb2312.bin 755 0 0
+file /etc/minigui/res/font/6x12-iso8859-1.bin		../../uclinux_app/minigui/res/font/6x12-iso8859-1.bin 755 0 0
+file /etc/minigui/res/font/Courier-rr-10-15.vbf		../../uclinux_app/minigui/res/font/Courier-rr-10-15.vbf 755 0 0
+file /etc/minigui/res/font/Helvetica-rr-15-16.vbf	../../uclinux_app/minigui/res/font/Helvetica-rr-15-16.vbf 755 0 0
+file /etc/minigui/res/font/Times-rr-13-15.vbf		../../uclinux_app/minigui/res/font/Times-rr-13-15.vbf 755 0 0
+
+#dir /bmp 0755 0 0
+file /etc/minigui/res/bmp/classic_check_button.bmp				../../uclinux_app/minigui/res/bmp/classic_check_button.bmp 755 0 0
+file /etc/minigui/res/bmp/classic_radio_button.bmp				../../uclinux_app/minigui/res/bmp/classic_radio_button.bmp 755 0 0
+file /etc/minigui/res/bmp/fashion_check_btn.bmp				../../uclinux_app/minigui/res/bmp/fashion_check_btn.bmp 755 0 0
+file /etc/minigui/res/bmp/fashion_radio_btn.bmp				../../uclinux_app/minigui/res/bmp/fashion_radio_btn.bmp 755 0 0
+file /etc/minigui/res/bmp/flat_check_button.bmp				../../uclinux_app/minigui/res/bmp/flat_check_button.bmp 755 0 0
+file /etc/minigui/res/bmp/flat_radio_button.bmp				../../uclinux_app/minigui/res/bmp/flat_radio_button.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_arrows.gif				../../uclinux_app/minigui/res/bmp/skin_arrows.gif 755 0 0
+file /etc/minigui/res/bmp/skin_arrows_shell.bmp				../../uclinux_app/minigui/res/bmp/skin_arrows_shell.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_bborder.bmp				../../uclinux_app/minigui/res/bmp/skin_bborder.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_bkgnd.bmp				../../uclinux_app/minigui/res/bmp/skin_bkgnd.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_caption.gif				../../uclinux_app/minigui/res/bmp/skin_caption.gif 755 0 0
+file /etc/minigui/res/bmp/skin_checkbtn.bmp				../../uclinux_app/minigui/res/bmp/skin_checkbtn.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_cpn_btn.gif				../../uclinux_app/minigui/res/bmp/skin_cpn_btn.gif 755 0 0
+file /etc/minigui/res/bmp/skin_header.bmp				../../uclinux_app/minigui/res/bmp/skin_header.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_lborder.bmp				../../uclinux_app/minigui/res/bmp/skin_lborder.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_pb_htrack.gif				../../uclinux_app/minigui/res/bmp/skin_pb_htrack.gif 755 0 0
+file /etc/minigui/res/bmp/skin_pb_htruck.bmp				../../uclinux_app/minigui/res/bmp/skin_pb_htruck.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_pb_vtrack.gif				../../uclinux_app/minigui/res/bmp/skin_pb_vtrack.gif 755 0 0
+file /etc/minigui/res/bmp/skin_pb_vtruck.bmp				../../uclinux_app/minigui/res/bmp/skin_pb_vtruck.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_pushbtn.gif				../../uclinux_app/minigui/res/bmp/skin_pushbtn.gif 755 0 0
+file /etc/minigui/res/bmp/skin_radiobtn.gif				../../uclinux_app/minigui/res/bmp/skin_radiobtn.gif 755 0 0
+file /etc/minigui/res/bmp/skin_rborder.bmp				../../uclinux_app/minigui/res/bmp/skin_rborder.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_sb_arrows.bmp				../../uclinux_app/minigui/res/bmp/skin_sb_arrows.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_sb_hshaft.bmp				../../uclinux_app/minigui/res/bmp/skin_sb_hshaft.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_sb_hthumb.bmp				../../uclinux_app/minigui/res/bmp/skin_sb_hthumb.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_sb_vshaft.bmp				../../uclinux_app/minigui/res/bmp/skin_sb_vshaft.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_sb_vthumb.bmp				../../uclinux_app/minigui/res/bmp/skin_sb_vthumb.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_tab.gif				../../uclinux_app/minigui/res/bmp/skin_tab.gif 755 0 0
+file /etc/minigui/res/bmp/skin_tb_horz.gif				../../uclinux_app/minigui/res/bmp/skin_tb_horz.gif 755 0 0
+file /etc/minigui/res/bmp/skin_tborder.bmp				../../uclinux_app/minigui/res/bmp/skin_tborder.bmp 755 0 0
+file /etc/minigui/res/bmp/skin_tbslider_h.gif				../../uclinux_app/minigui/res/bmp/skin_tbslider_h.gif 755 0 0
+file /etc/minigui/res/bmp/skin_tbslider_v.gif				../../uclinux_app/minigui/res/bmp/skin_tbslider_v.gif 755 0 0
+file /etc/minigui/res/bmp/skin_tb_vert.gif				../../uclinux_app/minigui/res/bmp/skin_tb_vert.gif 755 0 0
+file /etc/minigui/res/bmp/skin_tree.bmp				../../uclinux_app/minigui/res/bmp/skin_tree.bmp 755 0 0
 
 
 # Dropbear ssh server

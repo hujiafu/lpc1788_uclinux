@@ -111,12 +111,16 @@ static struct lpc1788fb_display lpc1788_lcd_cfg[] __initdata = {
          [2] = { /* 10.2 TFT + touchscreen*/
                  _LCD_DECLARE(
                          10,
-                         800, 45, 210, 1,          /* y timing */
-                         480, 22, 132, 1,       /* x timing */
+                         800, 45, 210, 2,          /* y timing */
+                         480, 22, 132, 2,       /* x timing */
                          24),    /* refresh rate, maximum stable,
                                   tested with the FPGA shield */
-				 .max_fre		= 40000000,
-				 .min_fre		= 32500000,	 
+				 //.max_fre		= 40000000,
+				 //.min_fre		= 32500000,	 
+				 //.max_fre		= 30000000,
+				 //.min_fre		= 20000000,	 
+				 .max_fre		= 25000000,
+				 .min_fre		= 15000000,	 
 				 .lcdctrl		= (LPC178X_LCD_TFT | LPC178X_LCD_16BPP_565 | LPC178X_LCD_RGB_SWAP),
                  .lcdpol        = (//LPC178X_LCD_FP_LOW |
                                     //LPC178X_LCD_LP_LOW |
