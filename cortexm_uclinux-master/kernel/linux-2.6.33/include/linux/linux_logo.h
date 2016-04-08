@@ -47,7 +47,11 @@ extern const struct linux_logo logo_superh_vga16;
 extern const struct linux_logo logo_superh_clut224;
 extern const struct linux_logo logo_m32r_clut224;
 extern const struct linux_logo logo_spe_clut224;
-
+#ifdef CONFIG_LOGO_JOINTLAGE_CLUT224
+extern const struct linux_logo logo_jointlage_clut224;
+#define LOGO_JOINTLAGE_WIDTH	610
+#define LOGO_JOINTLAGE_HEIGHT	172
+#endif
 extern const struct linux_logo *fb_find_logo(int depth);
 #ifdef CONFIG_FB_LOGO_EXTRA
 extern void fb_append_extra_logo(const struct linux_logo *logo,

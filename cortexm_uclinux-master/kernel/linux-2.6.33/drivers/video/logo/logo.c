@@ -115,6 +115,11 @@ const struct linux_logo * __init_refok fb_find_logo(int depth)
 		/* M32R Linux logo */
 		logo = &logo_m32r_clut224;
 #endif
+#ifdef CONFIG_LOGO_JOINTLAGE_CLUT224
+		printk("logo_jointlage_clut224\n");
+		/* M32R Linux logo */
+		logo = &logo_jointlage_clut224;
+#endif
 	}
 	return logo;
 }

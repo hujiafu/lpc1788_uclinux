@@ -470,6 +470,10 @@ static int fb_show_logo_line(struct fb_info *info, int rotate,
 
 	image.dx = 0;
 	image.dy = y;
+#ifdef CONFIG_LOGO_JOINTLAGE_CLUT224
+	image.dx = (info->var.xres/2) - (LOGO_JOINTLAGE_WIDTH/2);
+	image.dy = (info->var.yres/2) - (LOGO_JOINTLAGE_HEIGHT/2);
+#endif
 	image.width = logo->width;
 	image.height = logo->height;
 
