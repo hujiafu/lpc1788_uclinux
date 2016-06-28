@@ -26,6 +26,8 @@
 
 #include <mach/eth.h>
 #include <mach/platform.h>
+#include <mach/gpio.h>
+
 
 #if defined(CONFIG_LPC178X_MAC)
 
@@ -57,6 +59,8 @@ static struct resource		eth_resources[] = {
 static struct lpc178x_eth_data lpc178x_common_eth_data = {
 	.phy_irq        = -1,
 	.phy_mask       = 0xFFFFFFF0,
+	.rx_dv			= LPC178X_GPIO_MKPIN(1,13),
+	.rst			= LPC178X_GPIO_MKPIN(1,18),
 };
 
 /*

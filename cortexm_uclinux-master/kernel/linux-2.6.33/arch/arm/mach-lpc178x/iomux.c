@@ -573,6 +573,11 @@ static const struct lpc178x_gpio_pin_config lpc_lnx_evb_gpio[] = {
 	{{1, 16}, LPC178X_GPIO_CONFIG_D(1, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 	/* P1.17 (D) = RMII MDIO */
 	{{1, 17}, LPC178X_GPIO_CONFIG_D(1, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	
+	/* P1.13 (D) = RX_DV config as default IO for RMII mode */
+	{{1, 13}, LPC178X_GPIO_CONFIG_D(0, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P1.18 (D) = ENET_nRST config as default IO for PHY reset */
+	{{1, 18}, LPC178X_GPIO_CONFIG_D(0, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 #endif /* CONFIG_LPC178X_ETHER */
 };
 

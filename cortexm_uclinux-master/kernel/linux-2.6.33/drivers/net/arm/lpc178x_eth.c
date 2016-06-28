@@ -41,6 +41,8 @@
 #include <linux/etherdevice.h>
 #include <linux/skbuff.h>
 #include <linux/phy.h>
+#include <linux/io.h>
+#include <linux/gpio.h>
 
 #include <asm/delay.h>
 #include <asm/io.h>
@@ -1346,6 +1348,17 @@ static int lpc_net_drv_probe(struct platform_device *pdev)
 	struct phy_device *phydev;
 	dma_addr_t dma_handle;
 	int irq, ret;
+
+	struct lpc178x_eth_data	*pdata = pdev->dev.platform_data;
+
+	gpio_direction_output(pdata->rx_dv, 1);
+	gpio_direction_output(pdata->rst, 1);
+
+	gpio_set_value(pdata->rx_dv, 1);
+	gpio_set_value(pdata->rst, 0);
+	mdelay(10);
+	gpio_set_value(pdata->rst, 1);
+
 
 	/* Get platform resources */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);

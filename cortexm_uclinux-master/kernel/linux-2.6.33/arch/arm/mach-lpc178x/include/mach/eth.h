@@ -45,6 +45,8 @@
 struct lpc178x_eth_data {
 	int	phy_irq;	/* PHY IRQ number, or -1 for polling */
 	u32	phy_mask;	/* PHY mask value */
+	unsigned int rx_dv;
+	unsigned int rst;
 };
 
 void __init lpc178x_eth_init(void);
