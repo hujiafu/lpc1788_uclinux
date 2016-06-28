@@ -458,9 +458,9 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 	 * Pin configuration for the LCD interface
 	 */
 	/* P2.0 (D) = LCDPWR */
-	{{2,  0}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	//{{2,  0}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 	/* P2.1 (D) = LCDLE */
-	{{2,  1}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	//{{2,  1}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 	/* P2.2 (D) = LCDDCLK */
 	{{2,  2}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 	/* P2.3 (D) = LCDFP */
@@ -480,7 +480,9 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 	/* P2.8 (D) = LCD D6 */
 	{{2,  8}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 	/* P4.29 (D) = LCD D7 */
-	{{4,  29}, LPC178X_GPIO_CONFIG_D(5, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	//{{4,  29}, LPC178X_GPIO_CONFIG_D(5, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P2.9 (D) = LCD D7 */
+	{{2,  9}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 	
 	/* P1.20 (D) = LCD D10 */
 	{{1, 20}, LPC178X_GPIO_CONFIG_D(7, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
@@ -508,8 +510,10 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 
 
 
-	/* P1.3 (D) = PWM02 */
-	{{1,  3}, LPC178X_GPIO_CONFIG_D(3, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P1.3 (D) = PWM[0]2 */
+	//{{1,  3}, LPC178X_GPIO_CONFIG_D(3, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P2.1 (D) = PWM1[2] */
+	{{2,  1}, LPC178X_GPIO_CONFIG_D(1, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 #endif /* defined(CONFIG_FB_ARMCLCD) || defined(CONFIG_FB_ARMCLCD_MODULE) */
 
 #if defined(CONFIG_SND_LPC3XXX_SOC) || defined(CONFIG_SND_LPC3XXX_SOC_MODULE)

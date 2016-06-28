@@ -41,14 +41,14 @@ void __init lpc178x_pwm_init(void)
 {
 
 #if defined(CONFIG_LPC178X_PWM0)
-	lpc178x_pwm0_info.pwm_nr = 2;
+	lpc178x_pwm0_info.pwm_nr = 2; //P0[2]
 	lpc178x_pwm0_info.max_frequence = 1000;
 	lpc178x_pwm0_device.dev.platform_data = &lpc178x_pwm0_info;
 	platform_device_register(&lpc178x_pwm0_device);
 #endif
 
 #if defined(CONFIG_LPC178X_PWM1)
-	lpc178x_pwm1_info.pwm_nr = 0;
+	lpc178x_pwm1_info.pwm_nr = 2; //P1[2]
 	lpc178x_pwm1_info.max_frequence = 1000;
 	lpc178x_pwm1_device.dev.platform_data = &lpc178x_pwm1_info;
 	platform_device_register(&lpc178x_pwm1_device);
