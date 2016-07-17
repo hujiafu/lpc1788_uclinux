@@ -12,7 +12,7 @@ static int lpc178x_backlight_init(struct device *dev)
 }
 
 static struct platform_pwm_backlight_data lpc178x_backlight_data = {
-	.pwm_id	= 0,
+	.pwm_id	= 1,
 	.max_brightness = 100,
 	.dft_brightness = 80,
 	.pwm_period_ns	= 5000,
