@@ -510,7 +510,7 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 
 
 
-	/* P1.3 (D) = PWM[0]2 */
+	/* P1.3 (D) = PWM0[2] */
 	//{{1,  3}, LPC178X_GPIO_CONFIG_D(3, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 	/* P2.1 (D) = PWM1[2] */
 	{{2,  1}, LPC178X_GPIO_CONFIG_D(1, LPC178X_NO_PULLUP, 0, 0, 0, 0)},

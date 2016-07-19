@@ -230,10 +230,12 @@ struct phy_device * get_phy_device(struct mii_bus *bus, int addr)
 	u32 phy_id;
 	int r;
 
+	printk("phy_addr 0x%x\n", addr);
 	r = get_phy_id(bus, addr, &phy_id);
 	if (r)
 		return ERR_PTR(r);
 
+	printk("phy_id 0x%x\n", phy_id);
 	/* If the phy_id is mostly Fs, there is no device there */
 	if ((phy_id & 0x1fffffff) == 0x1fffffff)
 		return NULL;

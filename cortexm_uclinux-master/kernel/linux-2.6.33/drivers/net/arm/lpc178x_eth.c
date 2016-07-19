@@ -374,7 +374,8 @@ MODULE_PARM_DESC(watchdog, "transmit timeout in milliseconds");
  */
 static struct lpc178x_eth_data __lpc_local_net_config = {
 	.phy_irq = -1,
-	.phy_mask = 0xFFFFFFF0,
+	//.phy_mask = 0xFFFFFFF0,
+	.phy_mask = 0xFFFFFFC0,
 };
 
 /*
@@ -825,10 +826,11 @@ static int lpc_mii_init(struct netdata_local *pldat)
 	snprintf(pldat->mii_bus->id, MII_BUS_ID_SIZE, "%x", pldat->pdev->id);
 	pldat->mii_bus->priv = pldat;
 	pldat->mii_bus->parent = &pldat->pdev->dev;
-	pldat->mii_bus->phy_mask = 0xFFFFFFF0;
+	//pldat->mii_bus->phy_mask = 0xFFFFFFF0;
+	pldat->mii_bus->phy_mask = 0xFFFFFFC0;
 
-	if (pldat->ncfg)
-		pldat->mii_bus->phy_mask = pldat->ncfg->phy_mask;
+	//if (pldat->ncfg)
+	//	pldat->mii_bus->phy_mask = pldat->ncfg->phy_mask;
 
 	pldat->mii_bus->irq = kmalloc(sizeof(int) * PHY_MAX_ADDR, GFP_KERNEL);
 	if (!pldat->mii_bus->irq) {
@@ -1351,13 +1353,13 @@ static int lpc_net_drv_probe(struct platform_device *pdev)
 
 	struct lpc178x_eth_data	*pdata = pdev->dev.platform_data;
 
-	gpio_direction_output(pdata->rx_dv, 1);
-	gpio_direction_output(pdata->rst, 1);
+	//gpio_direction_output(pdata->rx_dv, 1);
+	//gpio_direction_output(pdata->rst, 1);
 
-	gpio_set_value(pdata->rx_dv, 1);
-	gpio_set_value(pdata->rst, 0);
-	mdelay(10);
-	gpio_set_value(pdata->rst, 1);
+	//gpio_set_value(pdata->rx_dv, 1);
+	//gpio_set_value(pdata->rst, 0);
+	//mdelay(10);
+	//gpio_set_value(pdata->rst, 1);
 
 
 	/* Get platform resources */
