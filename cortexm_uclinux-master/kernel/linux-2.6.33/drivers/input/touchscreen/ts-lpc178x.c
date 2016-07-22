@@ -25,6 +25,19 @@
 #define LPC1788_UART_FDR		0x28
 #define LPC1788_UART_TER		0x30
 
+#define LPC1788_LCR_DLAB		0x80 /* Divisor latch access bit */
+#define LPC1788_LCR_SBC			0x40 /* Set break control */
+#define LPC1788_LCR_SPAR		0x20 /* Stick parity (?) */
+#define LPC1788_LCR_EPAR		0x10 /* Even parity select */
+#define LPC1788_LCR_PARITY		0x08 /* Parity Enable */
+#define LPC1788_LCR_STOP		0x04 /* Stop bits: 0=1 bit, 1=2 bits */
+#define LPC1788_LCR_WLEN5		0x00 /* Wordlength: 5 bits */
+#define LPC1788_LCR_WLEN6		0x01 /* Wordlength: 6 bits */
+#define LPC1788_LCR_WLEN7		0x02 /* Wordlength: 7 bits */
+#define LPC1788_LCR_WLEN8		0x03 /* Wordlength: 8 bits */
+
+
+
 
 static int ts_lpc1788_debug = 4;
 
@@ -114,6 +127,18 @@ struct lpc178x_uart {
 	spinlock_t              lock;
 	struct hrtimer          timer;
 };
+
+static inline void serial_writel(unsigned long val, void __iomem *reg)
+{
+        __raw_writel(val, reg);
+}
+
+static inline void _serial_dl_write(struct lpc178x_uart *up, int value)
+{
+	serial_writel(value & 0xff, up->reg_base + LPC1788_UART_DLL); 
+	serial_writel((value >> 8) & 0xff, up->reg_base + LPC1788_UART_DLM);
+}
+
 
 static void ts_lpc178x_rx(void *ads)
 {
