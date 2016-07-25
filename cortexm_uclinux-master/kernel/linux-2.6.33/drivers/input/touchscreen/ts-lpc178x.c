@@ -289,10 +289,10 @@ static irqreturn_t ts_lpc1788_handler(int this_irq, void *dev_id)
 	if (!(iir & 0x1)) {
 		status = serial_readl(uart->reg_base + LPC1788_UART_LSR); 
 		if (status & (0x1 | 0x10))
-		  receive_chars(up, &status);
-		check_modem_status(up);
-		if (status & UART_LSR_THRE)
-                transmit_chars(up);
+		  uart_receive_chars(up, &status);
+		//check_modem_status(up);
+		//if (status & UART_LSR_THRE)
+                	//transmit_chars(up);
 	}
 
 	spin_unlock(&i->lock);
