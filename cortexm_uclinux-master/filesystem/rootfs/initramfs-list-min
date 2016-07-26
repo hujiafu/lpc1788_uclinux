@@ -148,6 +148,8 @@ file /etc/minigui/res/font/6x12-iso8859-1.bin		../../uclinux_app/minigui/res/fon
 file /etc/minigui/res/font/Courier-rr-10-15.vbf		../../uclinux_app/minigui/res/font/Courier-rr-10-15.vbf 755 0 0
 file /etc/minigui/res/font/Helvetica-rr-15-16.vbf	../../uclinux_app/minigui/res/font/Helvetica-rr-15-16.vbf 755 0 0
 file /etc/minigui/res/font/Times-rr-13-15.vbf		../../uclinux_app/minigui/res/font/Times-rr-13-15.vbf 755 0 0
+file /etc/minigui/res/font/mini.ttf					../../uclinux_app/minigui/res/font/mini.ttf 755 0 0
+file /etc/minigui/res/font/times.ttf				../../uclinux_app/minigui/res/font/times.ttf 755 0 0
 
 #dir /bmp 0755 0 0
 file /etc/minigui/res/bmp/classic_check_button.bmp				../../uclinux_app/minigui/res/bmp/classic_check_button.bmp 755 0 0
