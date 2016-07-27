@@ -55,6 +55,14 @@ static int ts_lpc1788_debug = 4;
 
 #endif
 
+struct irq_info {
+        struct                  hlist_node node;
+        int                     irq;
+        spinlock_t              lock;   /* Protects list not the hash */
+        struct list_head        *head;
+};
+
+
 struct ts_event {
 	/* For portability, we can't read 12 bit values using SPI (which
 	 * would make the controller deliver them as native byteorder u16
@@ -127,18 +135,83 @@ struct lpc178x_uart {
 	spinlock_t              lock;
 	struct hrtimer          timer;
 };
+	
+struct lpc178x_uart *uart;
+
+static inline unsigned long serial_readl(void __iomem *reg)
+{
+	return __raw_readl(reg);
+}
 
 static inline void serial_writel(unsigned long val, void __iomem *reg)
 {
         __raw_writel(val, reg);
 }
 
-static inline void _serial_dl_write(struct lpc178x_uart *up, int value)
+static inline void _serial_set_dlba(struct lpc178x_uart *up)
 {
-	serial_writel(value & 0xff, up->reg_base + LPC1788_UART_DLL); 
-	serial_writel((value >> 8) & 0xff, up->reg_base + LPC1788_UART_DLM);
+	unsigned long val;
+
+	val = serial_readl(up->reg_base + LPC1788_UART_LCR);
+	val |= (0x1<<7);  //DLBA bit
+	serial_writel(val, up->reg_base + LPC1788_UART_LCR); 
+
 }
 
+static inline void _serial_reset_dlba(struct lpc178x_uart *up)
+{
+	unsigned long val;
+
+	val = serial_readl(up->reg_base + LPC1788_UART_LCR);
+	val &= ~(0x1<<7);  //DLBA bit
+	serial_writel(val, up->reg_base + LPC1788_UART_LCR); 
+
+}
+
+static inline void _serial_dl_write(struct lpc178x_uart *up, int value)
+{
+	_serial_set_dlba(up);
+	serial_writel(value & 0xff, up->reg_base + LPC1788_UART_DLL); 
+	serial_writel((value >> 8) & 0xff, up->reg_base + LPC1788_UART_DLM);
+	_serial_reset_dlba(up);
+}
+
+static inline void _serial_dl_read(struct lpc178x_uart *up, int value)
+{
+	_serial_set_dlba(up);
+	val = serial_readl(up->reg_base + LPC1788_UART_DLL);
+	printk("read DLL 0x%x\n", val);
+	val = serial_readl(up->reg_base + LPC1788_UART_DLM);
+	printk("read DLM 0x%x\n", val);
+	_serial_reset_dlba(up);
+}
+
+static inline void _serial_ier_write(struct lpc178x_uart *up, int value)
+{
+	serial_writel(value, up->reg_base + LPC1788_UART_IER); 
+	val = serial_readl(up->reg_base + LPC1788_UART_IER); 
+	printk("read IER 0x%x\n", val);
+}
+
+static inline void _serial_lcr_write(struct lpc178x_uart *up, int value)
+{
+	serial_writel(value, up->reg_base + LPC1788_UART_LCR); 
+	val = serial_readl(up->reg_base + LPC1788_UART_LCR); 
+	printk("read LCR 0x%x\n", val);
+}
+
+static inline void _serial_fcr_write(struct lpc178x_uart *up, int value)
+{
+	serial_writel(value, up->reg_base + LPC1788_UART_FCR); 
+}
+
+unsigned long ts_calc_uart_baud(unsigned int baud)
+{
+	unsigned long val;
+	val = (54000000 / (16 * baud)) - 1;
+	printk("cal dll 0x%x\n", val);
+	return val;
+}
 
 static void ts_lpc178x_rx(void *ads)
 {
@@ -172,16 +245,33 @@ static void ts_lpc178x_rx(void *ads)
 		input_sync(input);
 	}
 	input_sync(input);
-
 }
-
 
 static irqreturn_t ts_lpc1788_handler(int this_irq, void *dev_id)
 {
+	struct irq_info *i = dev_id;
 
+	spin_lock(&i->lock);
+
+	val = serial_readl(uart->reg_base + LPC1788_UART_IIR); 
 
 }
 
+static void ts_lpc178x_start(struct lpc178x_uart *up)
+{
+	unsigned long baud;
+	unsigned long dll;
+
+	baud = 9600;
+	dll = ts_calc_uart_baud(baud);
+
+	_serial_dl_write(up, dll);
+	_serial_lcr_write(up, 0x3); //8bit 1 stop
+	_serial_fcr_write(up, 0x7); //reset fifo and enable fifo
+	_serial_ier_write(up, 0x5); //rbr and rx line interrupt enable
+
+
+}
 
 static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 {
