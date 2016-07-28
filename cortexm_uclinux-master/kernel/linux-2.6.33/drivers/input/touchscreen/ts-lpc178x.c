@@ -247,14 +247,55 @@ static void ts_lpc178x_rx(void *ads)
 	input_sync(input);
 }
 
+static void uart_receive_chars(struct lpc178x_uart *up, unsigned int *status)
+{
+
+	unsigned char ch, lsr = *status;
+	do {
+		if (likely(lsr & 0x1)){
+			ch = serial_readl(uart->reg_base + LPC1788_UART_DR); 
+		
+		}else{
+			ch = 0;
+		}
+		if (unlikely(lsr & 0x1E)) {
+			if (lsr & 0x10) {
+				up->port.icount.brk++;
+			}
+			else if (lsr & 0x4){
+				up->port.icount.parity++;
+			}else if (lsr & 0x8){
+				up->port.icount.frame++;
+			}
+			if (lsr & 0x2){
+				up->port.icount.overrun++;
+			}
+		
+		}
+ignore_char:
+		lsr = serial_readl(up->reg_base, LPC1788_UART_LSR);
+	}while ((lsr & (UART_LSR_DR | UART_LSR_BI)) && (max_count-- > 0));
+
+}
+
 static irqreturn_t ts_lpc1788_handler(int this_irq, void *dev_id)
 {
 	struct irq_info *i = dev_id;
 
 	spin_lock(&i->lock);
 
-	val = serial_readl(uart->reg_base + LPC1788_UART_IIR); 
+	iir = serial_readl(uart->reg_base + LPC1788_UART_IIR); 
 
+	if (!(iir & 0x1)) {
+		status = serial_readl(uart->reg_base + LPC1788_UART_LSR); 
+		if (status & (0x1 | 0x10))
+		  receive_chars(up, &status);
+		check_modem_status(up);
+		if (status & UART_LSR_THRE)
+                transmit_chars(up);
+	}
+
+	spin_unlock(&i->lock);
 }
 
 static void ts_lpc178x_start(struct lpc178x_uart *up)
