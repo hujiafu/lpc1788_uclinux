@@ -82,6 +82,11 @@ struct lpc178x_packet {
 	struct ts_event		tc;
 };
 
+struct lpc178x_ts_packet {
+	u8	status;
+	u8	param[4];
+};
+
 struct lpc178x_ts {
 	struct input_dev	*input;
 	char			phys[32];
@@ -136,6 +141,7 @@ struct lpc178x_uart {
 	struct hrtimer          timer;
 };
 	
+struct lpc178x_ts			*ts;
 struct lpc178x_uart *uart;
 
 static inline unsigned long serial_readl(void __iomem *reg)
@@ -213,9 +219,8 @@ unsigned long ts_calc_uart_baud(unsigned int baud)
 	return val;
 }
 
-static void ts_lpc178x_rx(void *ads)
+static void ts_lpc178x_rx()
 {
-	struct lpc178x_ts		*ts = ads;
 	struct lpc178x_packet	*packet = ts->packet;
 
 	u16			x, y, z1, z2, status;
@@ -225,8 +230,8 @@ static void ts_lpc178x_rx(void *ads)
 	 */
 	x = packet->tc.x;
 	y = packet->tc.y;
-	z1 = packet->tc.z1;
-	z2 = packet->tc.z2;
+	//z1 = packet->tc.z1;
+	//z2 = packet->tc.z2;
 	status = packet->tc.status;
 
 	if (x == MAX_12BIT)
@@ -247,30 +252,59 @@ static void ts_lpc178x_rx(void *ads)
 	input_sync(input);
 }
 
+struct lpc178x_ts_packet ts_data;
+int ts_byte_count = 0;
+
 static void uart_receive_chars(struct lpc178x_uart *up, unsigned int *status)
 {
 
 	unsigned char ch, lsr = *status;
+	struct lpc178x_packet	*packet = ts->packet;
+	
 	do {
 		if (likely(lsr & 0x1)){
 			ch = serial_readl(uart->reg_base + LPC1788_UART_DR); 
-		
+			if(ts_byte_count >= 1){
+				ts_byte_count++;
+			}
 		}else{
 			ch = 0;
 		}
 		if (unlikely(lsr & 0x1E)) {
 			if (lsr & 0x10) {
-				up->port.icount.brk++;
+				//up->port.icount.brk++;
 			}
 			else if (lsr & 0x4){
-				up->port.icount.parity++;
+				//up->port.icount.parity++;
 			}else if (lsr & 0x8){
-				up->port.icount.frame++;
+				//up->port.icount.frame++;
 			}
 			if (lsr & 0x2){
-				up->port.icount.overrun++;
+				//up->port.icount.overrun++;
 			}
-		
+		}
+		if(ch == 0x81 || ch == 0x80){
+			ts_byte_count = 1;
+			ts_data.status = ch;
+
+		}
+		if(ts_byte_count > 1 && ts_byte_count <= 5){
+			ts_data.param[ts_byte_count - 1] = ch;
+		}
+		if(ts_byte_count >= 5){
+
+			for(i=1; i<5; i++){
+				printk("0x%x ", ts_data.param[i]);
+			}
+			printk("\n");
+			
+			ts_byte_count = 0;
+			if(ts_data.status == 0x81 || ts_data.status == 0x80){
+				packet->tc.y = ((ts_data.param[0] >> 1) << 8) | (((ts_data.param[0] & 0x1) << 7) | (ts_data.param[1]));
+				packet->tc.x = ((ts_data.param[2] >> 1) << 8) | (((ts_data.param[2] & 0x1) << 7) | (ts_data.param[3]));
+				packet->tc.status = ts_data.status;
+				ts_lpc178x_rx();
+			}
 		}
 ignore_char:
 		lsr = serial_readl(up->reg_base, LPC1788_UART_LSR);
@@ -316,9 +350,7 @@ static void ts_lpc178x_start(struct lpc178x_uart *up)
 
 static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 {
-	struct lpc178x_ts			*ts;
 	struct lpc178x_packet		*packet;
-	struct lpc178x_uart *uart;
 	struct resource *regs;
 	struct input_dev		*input_dev;
 	int ret;
@@ -402,6 +434,8 @@ static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 	if (ret){
 		goto Error_release_nothing;
 	}
+
+	ts_lpc178x_start(uart);
 
 
 Error_release_nothing:
