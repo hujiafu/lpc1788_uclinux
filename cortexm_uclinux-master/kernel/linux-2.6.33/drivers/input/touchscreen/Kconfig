@@ -19,6 +19,12 @@ config TOUCHSCREEN_TSC2046
 	  Say Y here if you have a touchscreen interface using the
 	  TSC2046		
 
+config TOUCHSCREEN_LPC178X
+	tristate "LPC178X based touchscreens"
+	help
+	  Say Y here if you have a touchscreen interface using the
+	  touchscreen lpc178x		
+
 config TOUCHSCREEN_ADS7846
 	tristate "ADS7846/TSC2046 and ADS7843 based touchscreens"
 	depends on SPI_MASTER

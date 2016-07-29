@@ -5,6 +5,7 @@
 obj-$(CONFIG_MACH_LPC178X)	+= lpc178x_platform.o timer.o clock.o \
 				   iomux.o reboot.o power.o dma.o
 obj-$(CONFIG_SERIAL_8250)	+= uart.o
+obj-$(CONFIG_LPC178X_TS)	+= ts.o
 obj-$(CONFIG_LPC178X_ETHER)	+= eth.o
 obj-$(CONFIG_MTD_PHYSMAP)	+= flash.o
 obj-$(CONFIG_USB_OHCI_HCD)	+= ohci.o

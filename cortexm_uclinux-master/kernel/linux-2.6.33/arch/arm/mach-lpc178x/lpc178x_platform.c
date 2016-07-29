@@ -48,6 +48,7 @@
 #include <mach/rtc.h>
 #include <mach/wdt.h>
 #include <mach/wtv.h>
+#include <mach/ts.h>
 
 #if defined(CONFIG_GPIOLIB)
 #include <mach/i2c-gpio.h>
@@ -299,6 +300,10 @@ static void __init lpc178x_init(void)
 
 #if defined(CONFIG_TOUCHSCREEN_TSC2046)
 	lpc178x_touch_init();
+#endif
+
+#if defined(CONFIG_LPC178X_TS)
+	lpc178x_ts_init();
 #endif
 
 #if defined(CONFIG_I2C_AT24C08)

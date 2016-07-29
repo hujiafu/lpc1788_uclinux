@@ -111,6 +111,11 @@ config LPC178X_UART4
 	bool "Enable LPC178x/7x UART4 port"
 	default n
 
+config LPC178X_TS
+	depends on ARCH_LPC178X
+	bool "Enable JointWarn touchscreen port"
+	default n
+
 config LPC178X_MAC
 	depends on ARCH_LPC178X && LPC178X_ETHER
 	bool "Enable LPC178x/7x Ethernet port"

@@ -8,6 +8,8 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/gpio.h>
+#include <linux/platform_device.h>
+#include <asm/io.h>
 #include <asm/irq.h>
 
 
@@ -37,7 +39,7 @@
 #define LPC1788_LCR_WLEN8		0x03 /* Wordlength: 8 bits */
 
 
-
+#define MAX_12BIT 4096
 
 static int ts_lpc1788_debug = 4;
 
@@ -46,7 +48,7 @@ static int ts_lpc1788_debug = 4;
 #if defined(TS_LPC1788_DEBUG)
 
 #define ts_printk(level, fmt, args...)					\
-	if (ts_lpc178x_debug >= level) printk(KERN_INFO "%s: " fmt,	\
+	if (ts_lpc1788_debug >= level) printk(KERN_INFO "%s: " fmt,	\
 				       	   __func__, ## args)
 
 #else
@@ -184,6 +186,8 @@ static inline void _serial_dl_write(struct lpc178x_uart *up, int value)
 
 static inline void _serial_dl_read(struct lpc178x_uart *up, int value)
 {
+	unsigned long val;
+
 	_serial_set_dlba(up);
 	val = serial_readl(up->reg_base + LPC1788_UART_DLL);
 	printk("read DLL 0x%x\n", val);
@@ -194,6 +198,7 @@ static inline void _serial_dl_read(struct lpc178x_uart *up, int value)
 
 static inline void _serial_ier_write(struct lpc178x_uart *up, int value)
 {
+	unsigned long val;
 	serial_writel(value, up->reg_base + LPC1788_UART_IER); 
 	val = serial_readl(up->reg_base + LPC1788_UART_IER); 
 	printk("read IER 0x%x\n", val);
@@ -201,6 +206,7 @@ static inline void _serial_ier_write(struct lpc178x_uart *up, int value)
 
 static inline void _serial_lcr_write(struct lpc178x_uart *up, int value)
 {
+	unsigned long val;
 	serial_writel(value, up->reg_base + LPC1788_UART_LCR); 
 	val = serial_readl(up->reg_base + LPC1788_UART_LCR); 
 	printk("read LCR 0x%x\n", val);
@@ -258,12 +264,13 @@ int ts_byte_count = 0;
 static void uart_receive_chars(struct lpc178x_uart *up, unsigned int *status)
 {
 
+	int i;
 	unsigned char ch, lsr = *status;
 	struct lpc178x_packet	*packet = ts->packet;
 	
 	do {
 		if (likely(lsr & 0x1)){
-			ch = serial_readl(uart->reg_base + LPC1788_UART_DR); 
+			ch = serial_readl(uart->reg_base + LPC1788_UART_RX); 
 			if(ts_byte_count >= 1){
 				ts_byte_count++;
 			}
@@ -307,13 +314,15 @@ static void uart_receive_chars(struct lpc178x_uart *up, unsigned int *status)
 			}
 		}
 ignore_char:
-		lsr = serial_readl(up->reg_base, LPC1788_UART_LSR);
-	}while ((lsr & (UART_LSR_DR | UART_LSR_BI)) && (max_count-- > 0));
+		lsr = serial_readl(up->reg_base + LPC1788_UART_LSR);
+	}while ((lsr & (0x1 | 0x10)));
 
 }
 
 static irqreturn_t ts_lpc1788_handler(int this_irq, void *dev_id)
 {
+	unsigned long iir;
+	unsigned long status;
 	struct irq_info *i = dev_id;
 
 	spin_lock(&i->lock);
@@ -357,7 +366,7 @@ static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 
 
 	uart = kzalloc(sizeof(struct lpc178x_uart), GFP_KERNEL);
-	if (!gpio) {
+	if (!uart) {
 		ts_printk(1, "Error allocating memory\n");
 		ret = -ENOMEM;
 		goto Error_release_nothing;
@@ -372,14 +381,14 @@ static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 	}
 
 	uart->reg_base = ioremap(regs->start, regs->end - regs->start + 1);
-	if (!reg_base) {
+	if (!uart->reg_base) {
 		ts_printk(1, "unable to map register for gpio controller base=%08x\n", regs->start);
 		ret = -EINVAL;
 		goto Error_release_nothing;
 	}
 
 	uart->irq = platform_get_irq(pdev, 0);
-	if ((irq < 0) || (irq >= NR_IRQS)) {
+	if ((uart->irq < 0) || (uart->irq >= NR_IRQS)) {
 		ts_printk(1, "error getting irq\n");
 		ret = -ENXIO;
 		goto Error_release_nothing;
@@ -420,12 +429,12 @@ static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
 	input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 	input_set_abs_params(input_dev, ABS_X,
-			pdata->x_min ? : 0,
-			pdata->x_max ? : MAX_12BIT,
+			0,
+			MAX_12BIT,
 			0, 0);
 	input_set_abs_params(input_dev, ABS_Y,
-			pdata->y_min ? : 0,
-			pdata->y_max ? : MAX_12BIT,
+			0,
+			MAX_12BIT,
 			0, 0);
 	input_set_abs_params(input_dev, ABS_PRESSURE,
 			0, 100, 0, 0);
@@ -437,6 +446,7 @@ static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 
 	ts_lpc178x_start(uart);
 
+	printk("ts-lpc178x probe finish\n");
 
 Error_release_nothing:
 Done:
