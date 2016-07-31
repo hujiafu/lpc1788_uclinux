@@ -325,6 +325,8 @@ static irqreturn_t ts_lpc1788_handler(int this_irq, void *dev_id)
 	unsigned long status;
 	struct irq_info *i = dev_id;
 
+	printk("ts_lpc1788_handler\n");
+
 	spin_lock(&i->lock);
 
 	iir = serial_readl(uart->reg_base + LPC1788_UART_IIR); 
@@ -363,6 +365,7 @@ static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 	struct resource *regs;
 	struct input_dev		*input_dev;
 	int ret;
+	unsigned int *pconp;
 
 
 	uart = kzalloc(sizeof(struct lpc178x_uart), GFP_KERNEL);
@@ -393,7 +396,14 @@ static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 		ret = -ENXIO;
 		goto Error_release_nothing;
 	}
+	
+	pconp = (unsigned int *)0x400fc0c4;	
+	printk("PCONP 0x%x\n", *pconp);
+	*pconp |= (0x1<<24);
+	
+	_serial_ier_write(uart, 0x0); //rbr and rx line interrupt enable
 
+	printk("uart2 irq %d\n", uart->irq);
 	ret = request_irq(uart->irq, ts_lpc1788_handler, IRQF_DISABLED, "lpc178x-ts", uart);
 	if (ret){
 		ts_printk(1, "request irq failed\n");

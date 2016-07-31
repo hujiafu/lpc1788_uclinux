@@ -24,8 +24,9 @@ static struct resource lpc178x_uart2_resources[] = {
 
 static struct platform_device lpc178x_ts_device = {
 	.name = "ts-lpc178x",
-	.resource = lpc178x_uart2_resources,
 	.id = 0,
+	.num_resources  = ARRAY_SIZE(lpc178x_uart2_resources),
+	.resource = lpc178x_uart2_resources,
 };
 
 void __init lpc178x_ts_init(void)
