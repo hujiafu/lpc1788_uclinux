@@ -69,7 +69,7 @@ static struct resource flash_resources[] = {
  * 300000-end of Flash:	JFFS2 filesystem
  */
 #define FLASH_IMAGE_OFFSET	0x20000
-#define FLASH_JFFS2_OFFSET	(6*1024*1024)
+#define FLASH_JFFS2_OFFSET	(10*1024*1024)
 static struct mtd_partition flash_partitions[] = {
 	{
 		.name	= "flash_uboot_env",

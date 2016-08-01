@@ -320,6 +320,15 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 	{{0, 11}, LPC178X_GPIO_CONFIG_D(1, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
 #endif /* CONFIG_LPC178X_UART2 */
 
+#ifdef CONFIG_LPC178X_TS
+
+	/* P0.10 (D) = UART2 TXD */
+	{{0,  10}, LPC178X_GPIO_CONFIG_D(1, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P0.11 (D) = UART2 RXD */
+	{{0,  11}, LPC178X_GPIO_CONFIG_D(1, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+
+#endif
+
 #ifdef CONFIG_LPC178X_UART3
 #error Configuration of GPIO pins for UART3 is not available
 #endif /* CONFIG_LPC178X_UART3 */

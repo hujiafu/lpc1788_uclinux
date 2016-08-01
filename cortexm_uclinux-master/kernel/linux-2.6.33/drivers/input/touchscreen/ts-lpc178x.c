@@ -26,6 +26,7 @@
 #define LPC1788_UART_ACR		0x20
 #define LPC1788_UART_FDR		0x28
 #define LPC1788_UART_TER		0x30
+#define LPC1788_UART_CTRL		0x4c
 
 #define LPC1788_LCR_DLAB		0x80 /* Divisor latch access bit */
 #define LPC1788_LCR_SBC			0x40 /* Set break control */
@@ -162,7 +163,8 @@ static inline void _serial_set_dlba(struct lpc178x_uart *up)
 
 	val = serial_readl(up->reg_base + LPC1788_UART_LCR);
 	val |= (0x1<<7);  //DLBA bit
-	serial_writel(val, up->reg_base + LPC1788_UART_LCR); 
+	serial_writel(val, up->reg_base + LPC1788_UART_LCR);
+	printk("LCR 0x%x\n", serial_readl(up->reg_base + LPC1788_UART_LCR)); 
 
 }
 
@@ -173,6 +175,7 @@ static inline void _serial_reset_dlba(struct lpc178x_uart *up)
 	val = serial_readl(up->reg_base + LPC1788_UART_LCR);
 	val &= ~(0x1<<7);  //DLBA bit
 	serial_writel(val, up->reg_base + LPC1788_UART_LCR); 
+	printk("LCR 0x%x\n", serial_readl(up->reg_base + LPC1788_UART_LCR)); 
 
 }
 
@@ -184,7 +187,7 @@ static inline void _serial_dl_write(struct lpc178x_uart *up, int value)
 	_serial_reset_dlba(up);
 }
 
-static inline void _serial_dl_read(struct lpc178x_uart *up, int value)
+static inline void _serial_dl_read(struct lpc178x_uart *up)
 {
 	unsigned long val;
 
@@ -350,11 +353,13 @@ static void ts_lpc178x_start(struct lpc178x_uart *up)
 
 	baud = 9600;
 	dll = ts_calc_uart_baud(baud);
-
+	dll = 0x16f;
 	_serial_dl_write(up, dll);
+
+	_serial_dl_read(up);
 	_serial_lcr_write(up, 0x3); //8bit 1 stop
-	_serial_fcr_write(up, 0x7); //reset fifo and enable fifo
-	_serial_ier_write(up, 0x5); //rbr and rx line interrupt enable
+	_serial_fcr_write(up, 0x1); //reset fifo and enable fifo
+	_serial_ier_write(up, 0x3); //rbr and rx line interrupt enable
 
 
 }
@@ -457,7 +462,11 @@ static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 	ts_lpc178x_start(uart);
 
 	printk("ts-lpc178x probe finish\n");
-
+	printk("iir = 0x%x\n", serial_readl(uart->reg_base + LPC1788_UART_IIR));
+	printk("lsr = 0x%x\n", serial_readl(uart->reg_base + LPC1788_UART_LSR));
+	printk("fdr = 0x%x\n", serial_readl(uart->reg_base + LPC1788_UART_FDR));
+	printk("ctrl = 0x%x\n", serial_readl(uart->reg_base + LPC1788_UART_CTRL));
+	printk("ter = 0x%x\n", serial_readl(uart->reg_base + LPC1788_UART_TER));
 Error_release_nothing:
 Done:
 	return ret;
