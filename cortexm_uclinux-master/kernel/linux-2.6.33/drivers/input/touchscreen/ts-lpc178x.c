@@ -248,12 +248,14 @@ static void ts_lpc178x_rx()
 
 	struct input_dev *input = ts->input;
 
-	if(status & 0x81){
+	if(status == 0x81){
+		printk("p %d %d\n", x, y);
 		input_report_key(input, BTN_TOUCH, 1);
 		input_report_abs(input, ABS_X, x);
 		input_report_abs(input, ABS_Y, y);
 		input_report_abs(input, ABS_PRESSURE, 50);
 	}else{
+		printk("u %d %d\n", x, y);
 		input_report_key(input, BTN_TOUCH, 0);
 		input_report_abs(input, ABS_PRESSURE, 0);
 		input_sync(input);
@@ -303,15 +305,15 @@ static void uart_receive_chars(struct lpc178x_uart *up, unsigned int *status)
 		}
 		if(ts_byte_count >= 5){
 
-			for(i=1; i<5; i++){
-				printk("0x%x ", ts_data.param[i]);
-			}
-			printk("\n");
+			//for(i=1; i<5; i++){
+			//	printk("0x%x ", ts_data.param[i]);
+			//}
+			//printk("\n");
 			
 			ts_byte_count = 0;
 			if(ts_data.status == 0x81 || ts_data.status == 0x80){
-				packet->tc.y = ((ts_data.param[0] >> 1) << 8) | (((ts_data.param[0] & 0x1) << 7) | (ts_data.param[1]));
-				packet->tc.x = ((ts_data.param[2] >> 1) << 8) | (((ts_data.param[2] & 0x1) << 7) | (ts_data.param[3]));
+				packet->tc.y = ((ts_data.param[1] >> 1) << 8) | (((ts_data.param[1] & 0x1) << 7) | (ts_data.param[2]));
+				packet->tc.x = ((ts_data.param[3] >> 1) << 8) | (((ts_data.param[3] & 0x1) << 7) | (ts_data.param[4]));
 				packet->tc.status = ts_data.status;
 				ts_lpc178x_rx();
 			}
@@ -328,7 +330,7 @@ static irqreturn_t ts_lpc1788_handler(int this_irq, void *dev_id)
 	unsigned long status;
 	struct irq_info *i = dev_id;
 
-	printk("ts_lpc1788_handler\n");
+	//printk("ts_lpc1788_handler\n");
 
 	spin_lock(&i->lock);
 
@@ -337,7 +339,7 @@ static irqreturn_t ts_lpc1788_handler(int this_irq, void *dev_id)
 	if (!(iir & 0x1)) {
 		status = serial_readl(uart->reg_base + LPC1788_UART_LSR); 
 		if (status & (0x1 | 0x10))
-		  uart_receive_chars(up, &status);
+		  uart_receive_chars(uart, &status);
 		//check_modem_status(up);
 		//if (status & UART_LSR_THRE)
                 	//transmit_chars(up);
@@ -359,7 +361,7 @@ static void ts_lpc178x_start(struct lpc178x_uart *up)
 	_serial_dl_read(up);
 	_serial_lcr_write(up, 0x3); //8bit 1 stop
 	_serial_fcr_write(up, 0x1); //reset fifo and enable fifo
-	_serial_ier_write(up, 0x3); //rbr and rx line interrupt enable
+	_serial_ier_write(up, 0x5); //rbr and rx line interrupt enable
 
 
 }
