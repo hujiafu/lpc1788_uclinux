@@ -369,9 +369,15 @@ static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 	struct lpc178x_packet		*packet;
 	struct resource *regs;
 	struct input_dev		*input_dev;
+	struct irq_info	*i;
 	int ret;
 	unsigned int *pconp;
 
+	i = kzalloc(sizeof(struct irq_info), GFP_KERNEL);
+	if(i == NULL) {
+		ret = -ENOMEM;
+		goto Error_release_nothing;
+	}
 
 	uart = kzalloc(sizeof(struct lpc178x_uart), GFP_KERNEL);
 	if (!uart) {
@@ -409,7 +415,7 @@ static __devinit ts_lpc178x_probe(struct platform_device *pdev)
 	_serial_ier_write(uart, 0x0); //rbr and rx line interrupt enable
 
 	printk("uart2 irq %d\n", uart->irq);
-	ret = request_irq(uart->irq, ts_lpc1788_handler, IRQF_DISABLED, "lpc178x-ts", uart);
+	ret = request_irq(uart->irq, ts_lpc1788_handler, IRQF_DISABLED, "lpc178x-ts", i);
 	if (ret){
 		ts_printk(1, "request irq failed\n");
 		ret = -ENXIO;
