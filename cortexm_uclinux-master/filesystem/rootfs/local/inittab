@@ -1,6 +1,11 @@
 ::sysinit:/etc/rc
 ttyS0::wait:mdev -s
 ttyS0::once:/bin/hush -i
-ttyS0::once:/bin/fbtest
-ttyS0::once:/bin/mount_jffs2.sh
+ttyS0::wait:/bin/mount_jffs2.sh
 ttyS0::once:udhcpc
+ttyS0::once:udhcpc
+ttyS0::once:udhcpc
+ttyS0::once:udhcpc
+ttyS0::once:udhcpc
+ttyS0::wait:cp /mnt/JointWarn ./
+ttyS0::once:./JointWarn

@@ -872,7 +872,7 @@ int init_main(int argc UNUSED_PARAM, char **argv)
 	putenv((char *) "SHELL=/bin/sh");
 	putenv((char *) "USER=root"); /* needed? why? */
 	putenv((char *) "TSLIB_CONFFILE=/etc/ts.conf"); /* ts.conf */
-	putenv((char *) "TSLIB_CALIBFILE=/etc/ts.calib"); /* ts.calib */
+	putenv((char *) "TSLIB_CALIBFILE=/mnt/ts.calib"); /* ts.calib */
 	putenv((char *) "MG_CFG_PATH=/etc/minigui"); /* minigui cfg */
 
 	if (argv[1])

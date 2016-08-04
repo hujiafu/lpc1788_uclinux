@@ -452,6 +452,7 @@ static inline uint32_t cfi_send_gen_cmd(u_char cmd, uint32_t cmd_addr, uint32_t 
 	if (prev_val)
 		*prev_val = map_read(map, addr);
 
+	//printk("map->virt = 0x%x, offs = 0x%x, val = 0x%x\n", map->virt, addr, val);
 	map_write(map, val, addr);
 
 	return addr - base;

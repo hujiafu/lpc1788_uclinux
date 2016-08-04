@@ -50,14 +50,12 @@ dir /mnt 777 0 0
 
 # busybox binary should be in the source tree.
 file /bin/busybox ../../filesystem/busybox-1.17.0/busybox 755 0 0
-file /bin/fbtest ../../uclinux_app_test/fbtest 755 0 0
+#file /bin/JointWarn ../../uclinux_app/minigui/JointWarn 755 0 0
 file /bin/ts_calibrate ../../uclinux_app/ts_calibrate 755 0 0
-file /bin/fbtest.gdb ../../uclinux_app_test/fbtest.gdb 755 0 0
 file /bin/mount_jffs2.sh ../../uclinux_app/mount_jffs2.sh 755 0 0
 
 slink /bin/init busybox 777 0 0
 slink /init /bin/init 777 0 0
-slink /bin/test fbtest 777 0 0
 file /etc/inittab ../../filesystem/rootfs/local/inittab 755 0 0
 file /etc/ts.conf ../../uclinux_app/ts.conf 755 0 0
 
