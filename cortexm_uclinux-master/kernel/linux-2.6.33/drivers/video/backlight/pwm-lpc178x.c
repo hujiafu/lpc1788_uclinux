@@ -406,7 +406,7 @@ static int lpc178x_pwm_probe(struct platform_device *pdev)
 	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_CCR);
 	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_PCR);
 	pwm_writel(0x0, pwm->reg_base + LPC1788_PWM_LER);
-#if 0
+#if 1
 	ret = lpc178x_pwm_defconfig(pwm);
 	if(ret){
 		dev_err(&pdev->dev, "lpc178x_pwm_defconfig failed\n");
