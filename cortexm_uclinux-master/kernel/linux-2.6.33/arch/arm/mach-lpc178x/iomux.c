@@ -542,6 +542,14 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 	/* P0.9 (W) = I2S_TX_SDA */
 	{{0,  9}, LPC178X_GPIO_CONFIG_W(1, LPC178X_NO_PULLUP, 0, 0, 0, 0, 0)},
 #endif /* CONFIG_SND_LPC3XXX_SOC || CONFIG_SND_LPC3XXX_SOC_MODULE */
+
+#if defined(CONFIG_I2C_RFID)
+	/* P0.29 (U) = EINT0 */
+	{{0, 29}, LPC178X_GPIO_CONFIG_U(2)},
+	/* P0.30 (U) = EINT1 */
+	{{0, 30}, LPC178X_GPIO_CONFIG_U(2)},
+	
+#endif
 };
 
 /*

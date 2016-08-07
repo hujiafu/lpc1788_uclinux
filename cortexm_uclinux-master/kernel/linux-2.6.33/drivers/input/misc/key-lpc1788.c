@@ -244,6 +244,8 @@ static irqreturn_t btn_lpc1788_handler(int this_irq, void *dev_id)
 	int i = 0;
 	int data = 0;
 
+		printk("btn_lpc1788_handler\n");
+
 		for(i=0; i<BTN_NUM; i++){ 
 			if((btn_data[i].port) == 0){
 				//port 0

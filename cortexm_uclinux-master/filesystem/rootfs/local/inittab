@@ -9,3 +9,4 @@ ttyS0::once:udhcpc
 ttyS0::once:udhcpc
 ttyS0::wait:cp /mnt/JointWarn ./
 ttyS0::once:./JointWarn
+ttyS0::once:echo 100 > sys/class/backlight/pwm-backlight.0/brightness

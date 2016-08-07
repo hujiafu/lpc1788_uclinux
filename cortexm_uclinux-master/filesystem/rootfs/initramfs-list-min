@@ -184,6 +184,10 @@ file /etc/minigui/res/bmp/skin_tbslider_h.gif				../../uclinux_app/minigui/res/b
 file /etc/minigui/res/bmp/skin_tbslider_v.gif				../../uclinux_app/minigui/res/bmp/skin_tbslider_v.gif 755 0 0
 file /etc/minigui/res/bmp/skin_tb_vert.gif				../../uclinux_app/minigui/res/bmp/skin_tb_vert.gif 755 0 0
 file /etc/minigui/res/bmp/skin_tree.bmp				../../uclinux_app/minigui/res/bmp/skin_tree.bmp 755 0 0
+#file /etc/minigui/res/bmp/quest_prj.png				../../uclinux_app/minigui/res/bmp/quest_prj.png 755 0 0
+#file /etc/minigui/res/bmp/reset_prj.png				../../uclinux_app/minigui/res/bmp/reset_prj.png 755 0 0
+#file /etc/minigui/res/bmp/100-2.png				../../uclinux_app/minigui/res/bmp/100-2.png 755 0 0
+#file /etc/minigui/res/bmp/100-3.png				../../uclinux_app/minigui/res/bmp/100-3.png 755 0 0
 
 
 # Dropbear ssh server
