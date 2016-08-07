@@ -645,6 +645,7 @@ CONFIG_LPC178X_TS=y
 # CONFIG_SERIO is not set
 # CONFIG_GAMEPORT is not set
 CONFIG_LPC178X_KEY=y
+CONFIG_LPC178X_EINT=y
 
 #
 # Character devices

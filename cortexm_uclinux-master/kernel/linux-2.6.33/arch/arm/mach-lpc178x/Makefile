@@ -17,6 +17,7 @@ obj-$(CONFIG_I2C_RFID)		+= rfid.o
 obj-$(CONFIG_SPI_LPC1788)	+= spi.o
 obj-$(CONFIG_TOUCHSCREEN_TSC2046)	+= touch.o
 obj-$(CONFIG_LPC178X_KEY)	+= key.o
+obj-$(CONFIG_LPC178X_EINT)	+= eint-gpio.o
 obj-$(CONFIG_HAVE_PWM)	+= pwm.o
 obj-$(CONFIG_LPC178X_BL)	+= bl.o
 obj-$(CONFIG_FB_ARMCLCD)	+= lpc1788_lcd.o

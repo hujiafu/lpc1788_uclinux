@@ -2,6 +2,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 
+#include <mach/lpc178x.h>
 #include <mach/eint-gpio.h>
 #include <mach/platform.h>
 
@@ -14,10 +15,10 @@
 
 static struct plat_eint_data eint_data[] = {
 	{
-		.port0_active = LPC178X_EINT0_ACTIVE;
-		.port1_active = LPC178X_EINT1_ACTIVE;
-		.port2_active = LPC178X_EINT2_ACTIVE;
-		.port3_active = LPC178X_EINT3_ACTIVE;
+		.port0_active = LPC178X_EINT0_ACTIVE,
+		.port1_active = LPC178X_EINT1_ACTIVE,
+		.port2_active = LPC178X_EINT2_ACTIVE,
+		.port3_active = LPC178X_EINT3_ACTIVE,
 	},
 	{ },
 };
@@ -25,7 +26,7 @@ static struct plat_eint_data eint_data[] = {
 static struct resource lpc178x_eint_resources[] = {
 	{
 		.start = LPC178X_EINT_BASE,
-		.end = LPC178X_EINT_BASE + 0x20 - 1;
+		.end = LPC178X_EINT_BASE + 0x20 - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	{

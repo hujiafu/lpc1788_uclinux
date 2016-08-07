@@ -52,6 +52,7 @@
 
 #if defined(CONFIG_GPIOLIB)
 #include <mach/i2c-gpio.h>
+#include <mach/eint-gpio.h>
 #include <mach/gpio.h>
 #include <mach/touch.h>
 #include <mach/at24C08.h>
@@ -312,6 +313,10 @@ static void __init lpc178x_init(void)
 
 #if defined(CONFIG_LPC178X_KEY)
 	lpc178x_key_init();
+#endif	
+
+#if defined(CONFIG_LPC178X_EINT)
+	lpc178x_eint_gpio_init();
 #endif	
 
 #if defined(CONFIG_I2C_RFID)

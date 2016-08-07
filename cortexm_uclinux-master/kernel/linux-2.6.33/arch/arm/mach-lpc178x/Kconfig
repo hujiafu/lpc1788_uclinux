@@ -126,6 +126,11 @@ config LPC178X_KEY
 	bool "Enable LPC178x/7x key button"
 	default n
 
+config LPC178X_EINT
+	depends on ARCH_LPC178X
+	bool "Enable LPC178x/7x eint"
+	default n
+
 config LPC178X_PWM0
 	depends on ARCH_LPC178X && HAVE_PWM
 	bool "Enable LPC178x/7x pwm0"
