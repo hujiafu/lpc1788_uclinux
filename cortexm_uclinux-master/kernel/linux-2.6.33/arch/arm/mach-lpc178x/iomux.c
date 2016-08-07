@@ -426,9 +426,9 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 	 * on EA-LPC1788.
 	 */
 	/* P0.27 (I) = I2C0_SDA */
-	{{0, 27}, LPC178X_GPIO_CONFIG_I(1, 0, 1, 1)},
+	{{0, 27}, LPC178X_GPIO_CONFIG_I(1, 0, 0, 0)},
 	/* P0.28 (I) = I2C0_SDL */
-	{{0, 28}, LPC178X_GPIO_CONFIG_I(1, 0, 1, 1)},
+	{{0, 28}, LPC178X_GPIO_CONFIG_I(1, 0, 0, 0)},
 #endif /* defined(CONFIG_I2C_LPC2K) || defined(CONFIG_I2C_LPC2K_MODULE) */
 
 #if defined(CONFIG_SPI_LPC1788) && defined(CONFIG_LPC178X_SPI0)

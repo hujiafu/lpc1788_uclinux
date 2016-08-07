@@ -101,19 +101,31 @@ static ssize_t lpc178x_rfid_read(struct file *file, char __user *buf, size_t cou
 
 	adap = client->adapter;
 
-	msg[0].addr = client->addr;
+	msg[0].addr = (client->addr) >> 1;
 	msg[0].len = write_buf[0] + 1;
 	msg[0].buf = write_buf;
+	printk("client->addr %x\n", msg[0].addr);
 
-	msg[1].addr = client->addr;
-	msg[1].flags = I2C_M_RD | I2C_M_RECV_LEN;
-	msg[1].len = 19;
-	msg[1].buf = read_buf;//read data
+	//msg[1].addr = client->addr;
+	//msg[1].flags = I2C_M_RD | I2C_M_RECV_LEN;
+	//msg[1].len = 19;
+	//msg[1].buf = read_buf;//read data
 
-	ret = i2c_transfer(adap, msg, 2);
+	ret = i2c_transfer(adap, msg, 1);
 	printk(KERN_ERR "i2c_transfer:ret=%d\n",ret);
+	if (ret != 0){
+		printk(KERN_ERR "rfid i2c_transfer error\n");
+		goto out;
+	}
+	
+	msg[0].addr = (client->addr) >> 1;
+	msg[0].flags = I2C_M_RD | I2C_M_RECV_LEN;
+	msg[0].len = 19;
+	msg[0].buf = read_buf;//read data
+	ret = i2c_transfer(adap, msg, 1);
+	printk(KERN_ERR "read i2c_transfer:ret=%d\n",ret);
 
-	if (ret != 2){
+	if (ret != 0){
 		printk(KERN_ERR "rfid i2c_transfer error\n");
 		goto out;
 	}

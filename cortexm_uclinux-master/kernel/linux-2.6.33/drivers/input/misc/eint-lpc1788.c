@@ -109,18 +109,23 @@ static int lpc178x_eint_close(struct inode *inode, struct file *file)
 static int lpc178x_eint_read(struct file *file, char __user *buff, size_t count, loff_t *offset)
 {
 	unsigned long err;
+	
+	ev_press = 0;
 
 	if(!ev_press){
 		if(file->f_flags & O_NONBLOCK)
 			return -EAGAIN;
 		else
+		{
 			wait_event_interruptible(eint_waitq, ev_press);
+		}
 	}
 
-	ev_press = 0;
+	//ev_press = 0;
 
-	err = copy_to_user(buff, (const void*)eint_value, min(sizeof(eint_value), count));
-	return err ? -EFAULT : min(sizeof(eint_value), count);
+	err = copy_to_user(buff, (const void*)&eint_value, min(sizeof(eint_value), count));
+	//return err ? -EFAULT : min(sizeof(eint_value), count);
+	return err ? -EFAULT : 0;
 }
 
 static int lpc178x_eint_poll(struct file *file, struct poll_table_struct *wait)
@@ -231,6 +236,7 @@ static irqreturn_t eint3_lpc1788_handler(int this_irq, void *dev_id)
 		eint_writel(0x8, eint->reg_base + LPC178X_EXTINT);
 		eint_value = 0x8;
 	}
+	ev_press = 1;
 	wake_up_interruptible(&eint_waitq);
 	return IRQ_HANDLED;
 }
@@ -250,6 +256,7 @@ static irqreturn_t eint2_lpc1788_handler(int this_irq, void *dev_id)
 		eint_writel(0x4, eint->reg_base + LPC178X_EXTINT);
 		eint_value = 0x4;
 	}
+	ev_press = 1;
 	wake_up_interruptible(&eint_waitq);
 	return IRQ_HANDLED;
 }
@@ -269,6 +276,7 @@ static irqreturn_t eint1_lpc1788_handler(int this_irq, void *dev_id)
 		eint_writel(0x2, eint->reg_base + LPC178X_EXTINT);
 		eint_value = 0x2;
 	}
+	ev_press = 1;
 	wake_up_interruptible(&eint_waitq);
 	return IRQ_HANDLED;
 }
@@ -288,7 +296,7 @@ static irqreturn_t eint0_lpc1788_handler(int this_irq, void *dev_id)
 		eint_writel(0x1, eint->reg_base + LPC178X_EXTINT);
 		eint_value = 0x1;
 	}
-	
+	ev_press = 1;
 	wake_up_interruptible(&eint_waitq);
 #if 0
 		for(i=0; i<BTN_NUM; i++){ 
