@@ -389,7 +389,7 @@ static __devinit eint_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, eint);
 
 	eint_writel(0xf, eint->reg_base + LPC178X_MODE);
-	eint_writel(0xf, eint->reg_base + LPC178X_POLAR);
+	eint_writel(0x0, eint->reg_base + LPC178X_POLAR);
 	//ret = request_irq(gpio->irq, btn_lpc1788_handler, IRQF_DISABLED | IRQF_SHARED, "lpc178x-gpio", gpio);
 	if(eint_dev->port0_active == 1){
 		ret = request_irq(eint->irq, eint0_lpc1788_handler, IRQF_DISABLED, "lpc178x-eint", eint);
