@@ -57,32 +57,44 @@ static int lpc178x_wtv_close(struct inode *inode, struct file *file)
 static int lpc178x_wtv_write(struct file *file, const char __user *buff, size_t count, loff_t *offset)
 {
 	char data = *buff;
-	int i = 0;
+	int i = 0, j = 0;
 
-	if(count != 1){
-		wtv_printk(1, "wtv only support 1 byte write\n");
-		return -EFAULT;
-	}
+	//printk("lpc178x_wtv_wirte start %x %d\n", data, count);
+	//if(count != 1){
+	//	wtv_printk(1, "wtv only support 1 byte write\n");
+	//	return -EFAULT;
+	//}
+	//gpio_set_value(wtv_pdata->reset, 0);
+	//mdelay(6); //2ms < tsc < 10ms
+	//gpio_set_value(wtv_pdata->reset, 1);
+	//mdelay(70); //2ms < tsc < 10ms
 
 	gpio_set_value(wtv_pdata->cs, 0);
 	gpio_set_value(wtv_pdata->clock, 1);
 
-	mdelay(10);
+	mdelay(5); //2ms < tsc < 10ms
 
-	for(i=0; i<8; i++){
-		gpio_set_value(wtv_pdata->clock, 0);
-		if(data & 0x1){
-			gpio_set_value(wtv_pdata->data, 1);
-		}else{
-			gpio_set_value(wtv_pdata->data, 0);
+	for(j=0; j<count; j++){
+		data = buff[j];
+		for(i=0; i<8; i++){
+			gpio_set_value(wtv_pdata->clock, 0);
+			if(data & 0x1){
+				gpio_set_value(wtv_pdata->data, 1);
+			}else{
+				gpio_set_value(wtv_pdata->data, 0);
+			}
+			data = data >> 1;
+			udelay(500); // 100us < tdh < 1000us
+			gpio_set_value(wtv_pdata->clock, 1);
+			udelay(500); // 100us < tsckw < 1000us
 		}
-		data = data >> 1;
-		udelay(100);
-		gpio_set_value(wtv_pdata->clock, 1);
-		udelay(100);
+		gpio_set_value(wtv_pdata->data, 1);
+		mdelay(6); //tch > 20us
 	}
-	udelay(50);
+	//udelay(50);
+	mdelay(1); //tch > 20us
 	gpio_set_value(wtv_pdata->cs, 1);
+	printk("lpc178x_wtv_wirte finish\n");
 
 	return 1;
 }
@@ -133,9 +145,12 @@ static __devinit wtv_probe(struct platform_device *pdev)
 
 	gpio_direction_output(pdata->cs, 1);
 	gpio_direction_output(pdata->reset, 1);
-	gpio_direction_output(pdata->clock, 0);
-	gpio_direction_output(pdata->data, 0);
+	gpio_direction_output(pdata->clock, 1);
+	gpio_direction_output(pdata->data, 1);
 
+	gpio_set_value(pdata->reset, 0);
+	msleep(6);
+	gpio_set_value(pdata->reset, 1);
 
 	ret = misc_register(&misc);
 	if (ret){
