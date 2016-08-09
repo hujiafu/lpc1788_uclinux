@@ -18,6 +18,7 @@
 #include <linux/io.h>
 #include <linux/sched.h>
 #include <mach/touch.h>
+#include <mach/eint-gpio.h>
 #include <asm/irq.h>
 
 
@@ -105,7 +106,7 @@ static int lpc178x_eint_close(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int lpc178x_eintt_read(struct file *file, char __user *buff, size_t count, loff_t *offset)
+static int lpc178x_eint_read(struct file *file, char __user *buff, size_t count, loff_t *offset)
 {
 	unsigned long err;
 
@@ -351,7 +352,7 @@ static __devinit eint_probe(struct platform_device *pdev)
 	int i = 0;
 
 	eint = kzalloc(sizeof(struct lpc178x_eint), GFP_KERNEL);
-	if (!gpio) {
+	if (!eint) {
 		eint_printk(1, "Error allocating memory\n");
 		ret = -ENOMEM;
 		goto Error_release_nothing;
@@ -359,14 +360,14 @@ static __devinit eint_probe(struct platform_device *pdev)
 
 	eint_dev = (struct plat_eint_data *)pdev->dev.platform_data;
 	if(eint_dev == NULL){
-		eint_printk("no platform_data for pwm controller %d\n", pdev->id);
+		eint_printk(1, "no platform_data for eint controller %d\n", pdev->id);
 		ret = -ENXIO;
                 goto Error_release_nothing;
 	}
 
 	eint->irq = platform_get_irq(pdev, 0);
-	if (gpio->irq < 0) {
-		btn_printk(1, "invalid IRQ %d for gpio contoller\n", gpio->irq);
+	if (eint->irq < 0) {
+		eint_printk(1, "invalid IRQ %d for gpio contoller\n", eint->irq);
 		ret = -ENXIO;
 		goto Error_release_nothing;
 	}

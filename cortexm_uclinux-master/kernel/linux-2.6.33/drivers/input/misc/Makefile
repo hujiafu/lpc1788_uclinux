@@ -31,5 +31,6 @@ obj-$(CONFIG_INPUT_WISTRON_BTNS)	+= wistron_btns.o
 obj-$(CONFIG_INPUT_WM831X_ON)		+= wm831x-on.o
 obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_KEY_LPC178X)		+= key-lpc1788.o
+obj-$(CONFIG_INPUT_EINT_LPC178X)	+= eint-lpc1788.o
 obj-$(CONFIG_INPUT_RFID_LPC178X)	+= rfid-lpc1788.o
 
