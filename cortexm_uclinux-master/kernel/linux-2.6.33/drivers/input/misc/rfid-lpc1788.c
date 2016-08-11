@@ -129,12 +129,16 @@ static ssize_t lpc178x_rfid_read(struct file *file, char __user *buf, size_t cou
 		printk(KERN_ERR "rfid i2c_transfer error\n");
 		goto out;
 	}
-	ret = copy_to_user(buf, read_buf, count);
+	ret = copy_to_user(buf, read_buf, msg[0].len);
+	for(i=0; i<msg[0].len; i++){
+		printk("%x ", read_buf[i]);
+	}
+	printk("\n");
 	printk(KERN_ERR "copy_to_user:ret=%d\n",ret);
 	if(ret)
 		goto out;
 	return count;
-out:
+;out:
 	return -1;
 }
 
