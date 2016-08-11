@@ -550,6 +550,18 @@ static const struct lpc178x_gpio_pin_config ea_lpc1788_gpio[] = {
 	{{0, 30}, LPC178X_GPIO_CONFIG_U(2)},
 	
 #endif
+
+#if defined(CONFIG_LPC178X_WTV)
+	/* P1.2 (D) = WTV_CS */
+	{{1,  2}, LPC178X_GPIO_CONFIG_D(0, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P1.3 (D) = WTV_CLK */
+	{{1,  3}, LPC178X_GPIO_CONFIG_D(0, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P5.0 (D) = WTV_DATA */
+	{{5,  0}, LPC178X_GPIO_CONFIG_D(0, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+	/* P5.4 (D) = WTV_RESET */
+	{{5,  4}, LPC178X_GPIO_CONFIG_D(0, LPC178X_NO_PULLUP, 0, 0, 0, 0)},
+
+#endif
 };
 
 /*

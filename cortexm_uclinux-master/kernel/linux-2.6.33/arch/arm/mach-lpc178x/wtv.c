@@ -9,10 +9,10 @@
 
 
 static struct wtv_platform_data wtv_pldata = {
-	.cs = LPC178X_GPIO_MKPIN(0,6),
-	.reset = LPC178X_GPIO_MKPIN(0,7),
-	.clock = LPC178X_GPIO_MKPIN(0,8),	
-	.data = LPC178X_GPIO_MKPIN(0,9),
+	.cs = LPC178X_GPIO_MKPIN(1,2),
+	.reset = LPC178X_GPIO_MKPIN(5,4),
+	.clock = LPC178X_GPIO_MKPIN(1,3),	
+	.data = LPC178X_GPIO_MKPIN(5,0),
 };
 
 
